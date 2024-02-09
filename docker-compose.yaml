@@ -1,0 +1,27 @@
+version: '3.1'
+
+services:
+  db:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+    - 5432:5432
+
+  pgadmin:
+        image: dpage/pgadmin4
+        container_name: pgadmin
+        restart: always
+        environment:
+          PGADMIN_DEFAULT_EMAIL: admin@provee.com
+          PGADMIN_DEFAULT_PASSWORD: provee_admin
+          PGADMIN_LISTEN_PORT: 8080
+        ports:
+        - "8080:8080"
+        volumes:
+        - /vars/lib/pgadmin
+        depends_on:
+        - db

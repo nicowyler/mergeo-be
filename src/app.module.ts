@@ -1,0 +1,36 @@
+import { MiddlewareConsumer, Module } from '@nestjs/common';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { UserModule } from './modules/user/user.module';
+import { DatabaseModule } from './modules/database/database.module';
+import { EmailModule } from './modules/email/email.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { AuthModule } from './modules/auth/auth.module';
+import { WhatsAppModule } from './modules/whatsapp/whatsapp.module';
+import { CorsMiddleware } from './common/middlewares/cors.middleware';
+
+@Module({
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    UserModule,
+    DatabaseModule,
+    EmailModule,
+    WhatsAppModule,
+    EventEmitterModule.forRoot(),
+    AuthModule,
+  ],
+  controllers: [AppController],
+  providers: [AppService],
+})
+export class AppModule {
+  static port: number;
+
+  constructor(private readonly configService: ConfigService) {
+    AppModule.port = +this.configService.get('PORT');
+  }
+  configure(consumer: MiddlewareConsumer) {
+    // Apply the CORS middleware globally
+    consumer.apply(CorsMiddleware).forRoutes('*');
+  }
+}
