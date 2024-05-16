@@ -7,23 +7,32 @@ import { JwtService } from '@nestjs/jwt';
 import { UserService } from '@/modules/user/user.service';
 import { EncoderService } from '@/modules/auth/encoder.service';
 import { ConfigService } from '@nestjs/config';
-import { CreateUserDto } from '../user/dto';
 import { ErrorMessages } from '@/common/enum';
 import { User } from '../user/user.entity';
 import { UserDto } from './dto/auth.dto';
+import { RegisterCompanyDto, RegisterUserDto } from '@/modules/auth/dto';
+import { CompanyService } from '@/modules/company/company.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private userService: UserService,
+    private companyService: CompanyService,
     private jwtTokenService: JwtService,
     private encodderService: EncoderService,
     private _config: ConfigService,
   ) {}
 
-  async registerUser(userDto: CreateUserDto): Promise<any> {
+  async registerUser(regiserDto: RegisterUserDto): Promise<any> {
     const activationCode = this.encodderService.generateActivationCode();
-    await this.userService.createUser(userDto, activationCode);
+    const company = await this.companyService.getCompanyById(
+      regiserDto.companyId,
+    );
+    await this.userService.createUser(regiserDto, company, activationCode);
+  }
+
+  async registerCompany(regiserDto: RegisterCompanyDto): Promise<any> {
+    await this.companyService.createCompany(regiserDto);
   }
 
   async validateUserEmail(email: string, activationCode: string): Promise<any> {
@@ -82,7 +91,11 @@ export class AuthService {
 
   async generateAccessToken(user: UserDto) {
     const EXPIRE_TIME = 20 * 1000;
-    const payload = { email: user.email, sub: user.id, roles: user.roles };
+    const payload = {
+      email: user.email,
+      sub: user.id,
+      accountType: user.accountType,
+    };
     const secret = this._config.get('SECRET');
     const refresh_secret = this._config.get('REFRESH_SECRET');
     return {

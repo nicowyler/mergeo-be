@@ -8,8 +8,6 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { extractTokenFromHeader } from '@/common/utils/token.utils';
-import { Reflector } from '@nestjs/core';
-import { Role } from '@/common/enum';
 import { checkRoles } from '@/common/utils';
 
 @Injectable()
@@ -18,15 +16,11 @@ export class AuthGuard implements CanActivate {
   constructor(
     private jwtService: JwtService,
     private configService: ConfigService,
-    private reflector: Reflector,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
-    const roleName = this.reflector.get('role', context.getHandler()) || [
-      Role.ADMIN,
-      Role.PROVIDER,
-    ];
+
     const token = extractTokenFromHeader(request);
     if (!token) {
       throw new UnauthorizedException('Please provide token');
@@ -46,7 +40,6 @@ export class AuthGuard implements CanActivate {
       }
     }
 
-    checkRoles(this.payload);
     return true;
   }
 }

@@ -16,10 +16,10 @@ import { CreateUserDto, UpdateUserDto, UserResponseDto } from './dto';
 import { TransformInterceptor } from '@/interceptors/response.interceptor';
 import { ResponseMessage } from '@/decorators/response_message.decorator';
 import { plainToInstance } from 'class-transformer';
-import { GetUserByIdDto } from './dto/get-user-by-id.dto';
+import { GetUserDto } from './dto/get-user.dto';
 import { validate } from 'class-validator';
 import { AuthGuard } from '@/guards';
-import { Role } from '@/common/enum';
+import { PermissionsGuard } from '@/guards/permissions.guard';
 
 @UseInterceptors(TransformInterceptor)
 @Controller('user')
@@ -47,19 +47,13 @@ export class UserController {
   @ResponseMessage('Usuario encontrado!')
   @UseGuards(AuthGuard)
   async getUser(@Param() params): Promise<UserResponseDto> {
-    const idInstance = plainToInstance(GetUserByIdDto, params);
+    const idInstance = plainToInstance(GetUserDto, params);
     const isValidUUID = await validate(idInstance);
     if (isValidUUID.length) {
       throw new BadRequestException(isValidUUID[0].constraints.isUuid);
     }
     const user = await this.userService.getUser(idInstance.id);
     return plainToInstance(UserResponseDto, user);
-  }
-
-  @Post()
-  @ResponseMessage('Usuario Creado con exito!')
-  async createUser(@Body() body: CreateUserDto): Promise<void> {
-    await this.userService.createUser(body);
   }
 
   @Patch(':id')
@@ -74,8 +68,8 @@ export class UserController {
   }
 
   @Delete(':id')
-  @SetMetadata('role', Role.ADMIN)
-  @UseGuards(AuthGuard)
+  @SetMetadata('permissions', ['DELETE_USERS'])
+  @UseGuards(AuthGuard, PermissionsGuard)
   @ResponseMessage('El usuario a sido borrado con exito!')
   async removeUser(@Param('id') id: string): Promise<UserResponseDto> {
     const deletedUser = await this.userService.removeUser(id);

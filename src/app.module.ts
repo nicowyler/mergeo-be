@@ -9,11 +9,13 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AuthModule } from './modules/auth/auth.module';
 import { WhatsAppModule } from './modules/whatsapp/whatsapp.module';
 import { CorsMiddleware } from './common/middlewares/cors.middleware';
+import { CompanyModule } from './modules/company/company.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     UserModule,
+    CompanyModule,
     DatabaseModule,
     EmailModule,
     WhatsAppModule,

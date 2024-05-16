@@ -15,7 +15,8 @@ import {
   LoginDto,
   NewPasswordDto,
   PasswordRecoverDto,
-  RegisterDto,
+  RegisterCompanyDto,
+  RegisterUserDto,
   ValidateUserDto,
 } from './dto';
 import { TypedEventEmitter } from '@/modules/event-emitter/typed-event-emitter.class';
@@ -54,9 +55,16 @@ export class AuthController {
   }
 
   @ResponseMessage('Usuario Registrado!')
-  @Post('/register')
-  async register(@Body() regiserUserDto: RegisterDto) {
+  @Post('/register/user')
+  async registerUser(@Body() regiserUserDto: RegisterUserDto) {
     await this.authService.registerUser(regiserUserDto);
+    return {};
+  }
+
+  @ResponseMessage('Compania Registrada!')
+  @Post('/register/company')
+  async registerCompany(@Body() regiserCompanyDto: RegisterCompanyDto) {
+    await this.authService.registerCompany(regiserCompanyDto);
     return {};
   }
 
@@ -70,11 +78,18 @@ export class AuthController {
     }
     const tokens = await this.authService.generateAccessToken(validUser);
     const authDto = new AuthDto();
-    const { id, firstName, lastName, email: userEmail, roles } = validUser;
+    const {
+      id,
+      firstName,
+      lastName,
+      email: userEmail,
+      accountType,
+    } = validUser;
+
     authDto.user = {
       id: id,
       email: userEmail,
-      roles: roles,
+      accountType: accountType,
       name: `${firstName} ${lastName}`,
     };
     authDto.tokens = tokens;

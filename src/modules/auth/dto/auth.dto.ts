@@ -1,4 +1,4 @@
-import { Role } from '@/common/enum';
+import { ACCOUNT_TYPE } from '@/common/enum';
 import { IsEmail, IsEnum, IsNotEmpty, IsString } from 'class-validator';
 
 export class UserDto {
@@ -13,8 +13,8 @@ export class UserDto {
   name: string;
 
   @IsNotEmpty()
-  @IsEnum(Role)
-  roles?: string[];
+  @IsEnum(ACCOUNT_TYPE)
+  accountType?: string[];
 }
 
 class TokensDto {

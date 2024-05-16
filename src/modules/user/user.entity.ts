@@ -1,6 +1,15 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinTable,
+  ManyToMany,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { DateAudit } from '../../common/entities/base.entity';
-import { Role } from '@/common/enum';
+import { Company } from '../../modules/company/company.entity';
+import { ACCOUNT_TYPE } from '../../common/enum';
+import { Role } from '../../modules/user/role.entity';
 
 @Entity()
 export class User extends DateAudit {
@@ -30,10 +39,16 @@ export class User extends DateAudit {
 
   @Column({
     type: 'enum',
-    enum: Role,
+    enum: ACCOUNT_TYPE,
     nullable: false,
-    array: true,
-    default: [Role.USER],
+    default: [ACCOUNT_TYPE.USER],
   })
+  accountType: string;
+
+  @ManyToOne(() => Company, (company) => company.users)
+  company: Company;
+
+  @ManyToMany(() => Role)
+  @JoinTable()
   roles: Role[];
 }

@@ -1,10 +1,9 @@
-import { Role } from '@/common/enum';
+import { ACCOUNT_TYPE } from '@/common/enum';
 import {
   IsEmail,
   IsEnum,
   IsMobilePhone,
   IsNotEmpty,
-  IsOptional,
   IsString,
 } from 'class-validator';
 
@@ -27,4 +26,8 @@ export class CreateUserDto {
   @IsNotEmpty()
   @IsMobilePhone('es-AR')
   phoneNumber: string;
+
+  @IsNotEmpty()
+  @IsEnum(ACCOUNT_TYPE)
+  accountType: string;
 }

@@ -1,32 +1,32 @@
 import { Module } from '@nestjs/common';
-import { UserController } from './user.controller';
-import { UserService } from './user.service';
-import { User } from './user.entity';
+import { CompanyService } from './company.service';
+import { Company } from './company.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EncoderService } from '../auth/encoder.service';
 import { TypedEventEmitterModule } from '@/modules/event-emitter/typed-event-emitter.module';
 import { PassportModule } from '@nestjs/passport';
 import { AuthGuard } from '../../guards/auth.guard';
 import { JwtService } from '@nestjs/jwt';
-import { Permission } from '@/modules/user/permission.entity';
-import { Role } from '@/modules/user/role.entity';
-import { Company } from '@/modules/company/company.entity';
 import { Branch } from '@/modules/company/branch.entity';
-import { CompanyService } from '../company/company.service';
+import { Role } from '@/modules/user/role.entity';
+import { User } from '@/modules/user/user.entity';
+import { CompanyController } from '@/modules/company/company.controller';
+import { UserService } from '@/modules/user/user.service';
+import { Permission } from '@/modules/user/permission.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Role, Permission, Company, Branch]),
+    TypeOrmModule.forFeature([User, Role, Company, Branch, Permission]),
     TypedEventEmitterModule,
     PassportModule,
   ],
-  controllers: [UserController],
+  controllers: [CompanyController],
   providers: [
-    UserService,
     CompanyService,
+    UserService,
     EncoderService,
     JwtService,
     AuthGuard,
   ],
 })
-export class UserModule {}
+export class CompanyModule {}

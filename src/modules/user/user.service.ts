@@ -4,7 +4,7 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EncoderService } from '../auth/encoder.service';
 import { User } from './user.entity';
@@ -14,18 +14,27 @@ import { TypedEventEmitter } from '@/modules/event-emitter/typed-event-emitter.c
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { WhatsApp } from '@/common/enum/email.enum';
+import { Role } from '@/modules/user/role.entity';
+import { Permission } from '@/modules/user/permission.entity';
+import { Company } from '@/modules/company/company.entity';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Permission)
+    private readonly permissionRepository: Repository<Permission>,
     private encoderService: EncoderService,
     private readonly eventEmitter: TypedEventEmitter,
     private jwtTokenService: JwtService,
     private _config: ConfigService,
   ) {}
-  async createUser(createUserDto: CreateUserDto, activationCode?: string) {
+  async createUser(
+    createUserDto: CreateUserDto,
+    company: Company,
+    activationCode?: string,
+  ) {
     const { password } = createUserDto;
     const hashedPassword = await this.encoderService.encodePassword(password);
 
@@ -39,6 +48,7 @@ export class UserService {
 
     const user = this.userRepository.create({
       ...createUserDto,
+      company,
       activationCode: hashedActivationCode,
       password: hashedPassword,
     });
@@ -168,6 +178,66 @@ export class UserService {
     this.userRepository.remove(user);
 
     return user;
+  }
+
+  async fetchUserRoles(userId: number): Promise<Role[]> {
+    try {
+      // Find the user by userId along with its associated roles
+      const user = await this.userRepository
+        .createQueryBuilder('user')
+        .leftJoinAndSelect('user.roles', 'role')
+        .where('user.id = :userId', { userId })
+        .getOne();
+
+      // If user not found or user has no roles, return an empty array
+      if (!user || !user.roles) {
+        return [];
+      }
+
+      // Extract and return the roles associated with the user
+      return user.roles;
+    } catch (error) {
+      // Handle errors (e.g., database query errors)
+      console.error('Error fetching user roles:', error.message);
+      throw error;
+    }
+  }
+
+  async updateUserRolePermissions(
+    userId: string,
+    roleId: string,
+    permissionIds: string[],
+  ): Promise<User> {
+    // Step 1: Retrieve the user from the database
+    const user = await this.userRepository
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.roles', 'role')
+      .where('user.id = :userId', { userId })
+      .getOne();
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Step 2: Find the role by ID
+    const role = user.roles.find((userRole) => userRole.id === roleId);
+    if (!role) {
+      throw new Error('Role not found');
+    }
+
+    // Step 3: Fetch the Permissions entities based on the permission IDs
+    const permissions = await this.permissionRepository
+      .createQueryBuilder('permission')
+      .whereInIds(permissionIds)
+      .getMany();
+
+    if (!permissions || permissions.length !== permissionIds.length) {
+      throw new Error('Permissions not found');
+    }
+
+    // Step 4: Update the permissions for the role
+    role.permissions = permissions;
+
+    return this.userRepository.save(user);
   }
 
   async sendTestEmail(type: string) {

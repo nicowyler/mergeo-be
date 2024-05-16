@@ -1,5 +1,4 @@
-export enum Role {
-  ADMIN = 'ADMIN',
+export enum ACCOUNT_TYPE {
   USER = 'USER',
   PROVIDER = 'PROVIDER',
 }

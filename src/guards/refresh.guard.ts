@@ -8,7 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { extractTokenFromHeader } from '../common/utils/token.utils';
 import { Reflector } from '@nestjs/core';
-import { Role } from '@/common/enum';
+import { ACCOUNT_TYPE } from '@/common/enum';
 import { checkRoles } from '@/common/utils';
 
 @Injectable()
@@ -21,10 +21,11 @@ export class RefreshGuard implements CanActivate {
   ) {}
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
-    const roleName = this.reflector.get('role', context.getHandler()) || [
-      Role.ADMIN,
-      Role.PROVIDER,
-    ];
+    const accountType = this.reflector.get(
+      'account_type',
+      context.getHandler(),
+    ) || [ACCOUNT_TYPE.USER, ACCOUNT_TYPE.PROVIDER];
+
     const token = extractTokenFromHeader(request);
 
     if (!token) {

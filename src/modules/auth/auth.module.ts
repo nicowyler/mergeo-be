@@ -9,14 +9,22 @@ import { EncoderService } from './encoder.service';
 import { TypedEventEmitter } from '@/modules/event-emitter/typed-event-emitter.class';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from '../user/user.entity';
+import { Permission } from '@/modules/user/permission.entity';
+import { CompanyService } from '@/modules/company/company.service';
+import { Company } from '@/modules/company/company.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User]),
-    UserModule,
+    TypeOrmModule.forFeature([User, Company, Permission]),
     AuthProvider,
   ],
-  providers: [AuthService, EncoderService, TypedEventEmitter, UserService],
+  providers: [
+    AuthService,
+    EncoderService,
+    TypedEventEmitter,
+    UserService,
+    CompanyService,
+  ],
   controllers: [AuthController],
   exports: [AuthService],
 })

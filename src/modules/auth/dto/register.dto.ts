@@ -1,34 +1,10 @@
-import { Role } from '@/common/enum';
-import {
-  IsEmail,
-  IsEnum,
-  IsMobilePhone,
-  IsNotEmpty,
-  IsString,
-} from 'class-validator';
+import { CreateCompanyDto } from '@/modules/company/dto';
+import { CreateUserDto } from '@/modules/user/dto';
+import { IsNumber, IsString } from 'class-validator';
 
-export class RegisterDto {
-  @IsNotEmpty()
+export class RegisterUserDto extends CreateUserDto {
   @IsString()
-  firstName: string;
-
-  @IsNotEmpty()
-  @IsString()
-  lastName: string;
-
-  @IsEmail()
-  @IsNotEmpty()
-  email: string;
-
-  @IsString()
-  @IsNotEmpty()
-  password: string;
-
-  @IsNotEmpty()
-  @IsMobilePhone('es-AR')
-  phoneNumber: string;
-
-  @IsNotEmpty()
-  @IsEnum(Role, { each: true })
-  roles?: Role[];
+  companyId: string;
 }
+
+export class RegisterCompanyDto extends CreateCompanyDto {}
