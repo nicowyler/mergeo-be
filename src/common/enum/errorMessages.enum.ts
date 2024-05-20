@@ -8,6 +8,9 @@ export enum ErrorMessages {
   // COMPANY
   COMPANY_NOT_FOUND = 'No se encontro ninguna compania con el id',
 
+  // COMPANY
+  ROLE_NAME_TAKEN = 'El rol ya existe',
+
   // ACTIVATION CODE
   ACTIVATION_CODE_LENGTH = 'El codigo de activacion tine que ser de 6 caracteres',
   ACTIVATION_CODE_NOT_VALID = 'El codigo de validacion es incorrecto!',

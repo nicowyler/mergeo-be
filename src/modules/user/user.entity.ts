@@ -7,9 +7,9 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { DateAudit } from '../../common/entities/base.entity';
-import { Company } from '../../modules/company/company.entity';
+import { Company } from '../company/company.entity';
 import { ACCOUNT_TYPE } from '../../common/enum';
-import { Role } from '../../modules/user/role.entity';
+import { Role } from '../role/role.entity';
 
 @Entity()
 export class User extends DateAudit {

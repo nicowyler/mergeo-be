@@ -8,8 +8,8 @@ import { TypedEventEmitterModule } from '@/modules/event-emitter/typed-event-emi
 import { PassportModule } from '@nestjs/passport';
 import { AuthGuard } from '../../guards/auth.guard';
 import { JwtService } from '@nestjs/jwt';
-import { Permission } from '@/modules/user/permission.entity';
-import { Role } from '@/modules/user/role.entity';
+import { Permission } from '@/modules/role/permission.entity';
+import { Role } from '@/modules/role/role.entity';
 import { Company } from '@/modules/company/company.entity';
 import { Branch } from '@/modules/company/branch.entity';
 import { CompanyService } from '../company/company.service';

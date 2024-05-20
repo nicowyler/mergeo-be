@@ -1,10 +1,13 @@
-import { Permission } from '../../modules/user/permission.entity';
+import { User } from '../../modules/user/user.entity';
+import { Permission } from './permission.entity';
 import {
   Entity,
   Column,
   PrimaryGeneratedColumn,
   ManyToMany,
   JoinTable,
+  ManyToOne,
+  Index,
 } from 'typeorm';
 
 @Entity()
@@ -12,13 +15,13 @@ export class Role {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column({ unique: true, name: 'role_name' })
   name: string;
-
-  @Column()
-  description: string;
 
   @ManyToMany(() => Permission)
   @JoinTable()
   permissions: Permission[];
+
+  @ManyToOne(() => User)
+  createdBy: User;
 }

@@ -1,6 +1,6 @@
 // permissions.guard.ts
-import { Permission } from '@/modules/user/permission.entity';
-import { Role } from '@/modules/user/role.entity';
+import { Permission } from '@/modules/role/permission.entity';
+import { Role } from '@/modules/role/role.entity';
 import { UserService } from '@/modules/user/user.service';
 import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';

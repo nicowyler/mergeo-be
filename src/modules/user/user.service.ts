@@ -4,19 +4,19 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { In, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EncoderService } from '../auth/encoder.service';
-import { User } from './user.entity';
 import { CreateUserDto, UpdateUserDto } from './dto';
 import { Emails, ErrorMessages } from 'src/common/enum';
 import { TypedEventEmitter } from '@/modules/event-emitter/typed-event-emitter.class';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { WhatsApp } from '@/common/enum/email.enum';
-import { Role } from '@/modules/user/role.entity';
-import { Permission } from '@/modules/user/permission.entity';
-import { Company } from '@/modules/company/company.entity';
+import { WhatsApp } from '../../common/enum/email.enum';
+import { Role } from '../../modules/role/role.entity';
+import { Permission } from '../../modules/role/permission.entity';
+import { Company } from '../../modules/company/company.entity';
+import { User } from './user.entity';
 
 @Injectable()
 export class UserService {

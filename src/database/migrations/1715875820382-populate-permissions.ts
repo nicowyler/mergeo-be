@@ -1,5 +1,5 @@
 import { PERMISSIONS } from '../../common/enum/permissions.enum';
-import { Permission } from '../../modules/user/permission.entity';
+import { Permission } from '../../modules/role/permission.entity';
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class PopulatePermissions1715875820382 implements MigrationInterface {

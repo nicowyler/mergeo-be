@@ -1,32 +1,24 @@
 import { Module } from '@nestjs/common';
-import { CompanyService } from './company.service';
-import { Company } from './company.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EncoderService } from '../auth/encoder.service';
 import { TypedEventEmitterModule } from '@/modules/event-emitter/typed-event-emitter.module';
 import { PassportModule } from '@nestjs/passport';
 import { AuthGuard } from '../../guards/auth.guard';
 import { JwtService } from '@nestjs/jwt';
-import { Branch } from '@/modules/company/branch.entity';
+import { Permission } from '@/modules/role/permission.entity';
 import { Role } from '@/modules/role/role.entity';
 import { User } from '@/modules/user/user.entity';
-import { CompanyController } from '@/modules/company/company.controller';
+import { RoleController } from '@/modules/role/role.controller';
+import { RoleService } from '@/modules/role/role.service';
 import { UserService } from '@/modules/user/user.service';
-import { Permission } from '@/modules/role/permission.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Role, Company, Branch, Permission]),
+    TypeOrmModule.forFeature([User, Role, Permission]),
     TypedEventEmitterModule,
     PassportModule,
   ],
-  controllers: [CompanyController],
-  providers: [
-    CompanyService,
-    UserService,
-    EncoderService,
-    JwtService,
-    AuthGuard,
-  ],
+  controllers: [RoleController],
+  providers: [RoleService, UserService, EncoderService, JwtService, AuthGuard],
 })
-export class CompanyModule {}
+export class RoleModule {}
