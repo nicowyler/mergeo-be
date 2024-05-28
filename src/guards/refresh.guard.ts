@@ -8,8 +8,8 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { extractTokenFromHeader } from '../common/utils/token.utils';
 import { Reflector } from '@nestjs/core';
-import { ACCOUNT_TYPE } from '@/common/enum';
-import { checkRoles } from '@/common/utils';
+import { ACCOUNT_TYPE } from '../common/enum';
+import { checkRoles } from '../common/utils';
 
 @Injectable()
 export class RefreshGuard implements CanActivate {

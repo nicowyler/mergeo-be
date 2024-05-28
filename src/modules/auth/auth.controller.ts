@@ -10,7 +10,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { ResponseMessage } from '@/decorators/response_message.decorator';
+import { ResponseMessage } from '../../decorators/response_message.decorator';
 import {
   LoginDto,
   NewPasswordDto,
@@ -19,18 +19,18 @@ import {
   RegisterUserDto,
   ValidateUserDto,
 } from './dto';
-import { TypedEventEmitter } from '@/modules/event-emitter/typed-event-emitter.class';
+import { TypedEventEmitter } from '../../modules/event-emitter/typed-event-emitter.class';
 import { ConfigService } from '@nestjs/config';
-import { TransformInterceptor } from '@/interceptors/response.interceptor';
-import { AuthGuard } from '@/guards';
-import { AuthenticatedRequest } from '@/common/interface/AuthenticatedRequest.inteeface';
-import { UserService } from '@/modules/user/user.service';
+import { TransformInterceptor } from '../../interceptors/response.interceptor';
+import { AuthGuard } from '../../guards';
+import { AuthenticatedRequest } from '../../common/interface/AuthenticatedRequest.inteeface';
+import { UserService } from '../../modules/user/user.service';
 import {
   AuthDto,
   RefreshTokenDto,
   RefreshTokenResponseDto,
 } from './dto/auth.dto';
-import { RefreshGuard } from '@/guards/refresh.guard';
+import { RefreshGuard } from '../../guards/refresh.guard';
 @UseInterceptors(TransformInterceptor)
 @Controller('auth')
 export class AuthController {

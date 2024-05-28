@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
-import { CORS } from '@/common/constants';
+import { CORS } from './common/constants';
 import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {

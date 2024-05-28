@@ -4,15 +4,14 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Role } from '@/modules/role/role.entity';
-import { Permission } from '@/modules/role/permission.entity';
-import { UserService } from '../user/user.service';
+import { Role } from '../../modules/role/role.entity';
+import { Permission } from '../../modules/role/permission.entity';
 import { CreateRoleDto } from './dto';
-import { plainToInstance } from 'class-transformer';
-import { ResponseCreateRoleDto } from '@/modules/role/dto/createRole.dto';
-import { ErrorMessages } from '@/common/enum';
+import { ErrorMessages } from '../../common/enum';
+import { GetRoleDto, UpdateRoleDto } from 'src/modules/role/dto/role.dto';
+import { User } from 'src/modules/user/user.entity';
 
 @Injectable()
 export class RoleService {
@@ -21,35 +20,24 @@ export class RoleService {
     private readonly roleRepository: Repository<Role>,
     @InjectRepository(Permission)
     private readonly permissionRepository: Repository<Permission>,
-    private userService: UserService,
   ) {}
   async createRole(
+    companyId: string,
+    user: User,
     createRoleDto: CreateRoleDto,
-  ): Promise<ResponseCreateRoleDto> {
+  ): Promise<Role> {
     try {
-      const user = await this.userService.getUser(createRoleDto.userId);
-
-      if (!user) {
-        throw new NotFoundException(
-          `User with id ${createRoleDto.userId} not found`,
-        );
-      }
       const role = new Role();
       role.name = createRoleDto.name;
       role.permissions = createRoleDto.permissions;
-      role.createdBy = user;
+      role.companyId = companyId;
+      role.user = user;
 
       const roleCreated = await this.roleRepository.save(role);
-      const response = plainToInstance(ResponseCreateRoleDto, {
-        ...roleCreated,
-        createdBy: user.id,
-      });
-      return response;
+      return roleCreated;
     } catch (error) {
       if (error.code === '23502') {
-        throw new NotFoundException(
-          `User with id ${createRoleDto.userId} not found`,
-        );
+        throw new NotFoundException(`User with id ${user.id} not found`);
       } else if (error.code === '23505') {
         throw new ConflictException(ErrorMessages.ROLE_NAME_TAKEN);
       } else {
@@ -58,13 +46,47 @@ export class RoleService {
     }
   }
 
-  async getUserRoles(userId: string): Promise<Role[]> {
-    return await this.roleRepository
-      .createQueryBuilder('role')
-      .innerJoin('role.createdBy', 'createdBy')
-      .leftJoinAndSelect('role.permissions', 'permissions')
-      .where('createdBy.id = :userId', { userId: userId })
-      .getMany();
+  async getRoles(companyId: string): Promise<GetRoleDto> {
+    const roles = await this.roleRepository.find({
+      where: { companyId: companyId },
+      relations: ['user', 'permissions'],
+    });
+
+    const returnRoles = roles.map((role) => {
+      return {
+        id: role.id,
+        name: role.name,
+        permissions: role.permissions,
+      };
+    });
+
+    return { companyId: companyId, roles: returnRoles };
+  }
+
+  async getRolesById(roleIds: Pick<Role, 'id'>[]): Promise<Role[]> {
+    const roles = await this.roleRepository.find({
+      where: { id: In(roleIds) },
+    });
+    return roles;
+  }
+
+  async updateRole(id: string, body: UpdateRoleDto): Promise<Role> {
+    const role = await this.roleRepository.save({
+      id: id,
+      ...body,
+    });
+    return role;
+  }
+
+  async deleteRole(id: string): Promise<void> {
+    const deleteResult = await this.roleRepository.delete({
+      id: id,
+    });
+
+    if (deleteResult.affected === 0) {
+      throw new NotFoundException(ErrorMessages.ROLE_NOT_FOUND, id);
+    }
+    return;
   }
 
   async getPermissions(): Promise<Permission[]> {

@@ -7,9 +7,16 @@ export enum ErrorMessages {
 
   // COMPANY
   COMPANY_NOT_FOUND = 'No se encontro ninguna compania con el id',
+  COMPANY_NAME_TAKEN = 'Ya existe una Compania con ese nombre',
+  COMPANY_BUSINESS_NAME_TAKEN = 'Ya existe una Compania con esa Razon Social',
+  COMPANY_CUIT_TAKEN = 'Ya existe una Compania con ese CUIT',
+  // COMPANY / BRANCH
+  BRANCH_NOT_FOUND = 'No se encontro ninguna sucursak con el id',
+  BRANCH_NAME_TAKEN = 'Ya existe una Sucursal con ese nombre',
 
   // COMPANY
   ROLE_NAME_TAKEN = 'El rol ya existe',
+  ROLE_NOT_FOUND = 'No se encontro ningun rol con el id',
 
   // ACTIVATION CODE
   ACTIVATION_CODE_LENGTH = 'El codigo de activacion tine que ser de 6 caracteres',

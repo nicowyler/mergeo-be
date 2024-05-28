@@ -1,9 +1,9 @@
-import { CreateCompanyDto } from '@/modules/company/dto';
-import { CreateUserDto } from '@/modules/user/dto';
-import { IsNumber, IsString } from 'class-validator';
+import { CreateCompanyDto } from '../../../modules/company/dto';
+import { CreateUserDto } from '../../../modules/user/dto';
+import { IsUUID } from 'class-validator';
 
 export class RegisterUserDto extends CreateUserDto {
-  @IsString()
+  @IsUUID('4')
   companyId: string;
 }
 

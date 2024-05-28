@@ -7,21 +7,26 @@ import {
   ManyToMany,
   JoinTable,
   ManyToOne,
-  Index,
+  Unique,
 } from 'typeorm';
 
 @Entity()
+@Unique('UQ_ROLE_NAME', ['name'])
 export class Role {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ unique: true, name: 'role_name' })
+  @Column()
   name: string;
 
   @ManyToMany(() => Permission)
   @JoinTable()
   permissions: Permission[];
 
-  @ManyToOne(() => User)
-  createdBy: User;
+  @Column('uuid')
+  companyId: string;
+
+  @ManyToOne(() => User, (user) => user.role)
+  @JoinTable()
+  user: User;
 }

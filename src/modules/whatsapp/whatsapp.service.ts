@@ -1,11 +1,11 @@
-import { EventPayloads } from '@/common/interface/event-types.interface';
+import { EventPayloads } from '../../common/interface/event-types.interface';
 import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { OnEvent } from '@nestjs/event-emitter';
 import { firstValueFrom } from 'rxjs';
 import { bodyParams, testTemplate } from './whatsappTemplates';
-import { WhatsApp } from '@/common/enum/email.enum';
+import { WhatsApp } from '../../common/enum/email.enum';
 @Injectable()
 export class WhatsappService {
   constructor(

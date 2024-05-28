@@ -4,14 +4,14 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { UserService } from '@/modules/user/user.service';
-import { EncoderService } from '@/modules/auth/encoder.service';
+import { UserService } from '../../modules/user/user.service';
+import { EncoderService } from '../../modules/auth/encoder.service';
 import { ConfigService } from '@nestjs/config';
-import { ErrorMessages } from '@/common/enum';
+import { ErrorMessages } from '../../common/enum';
 import { User } from '../user/user.entity';
 import { UserDto } from './dto/auth.dto';
-import { RegisterCompanyDto, RegisterUserDto } from '@/modules/auth/dto';
-import { CompanyService } from '@/modules/company/company.service';
+import { RegisterCompanyDto, RegisterUserDto } from '../../modules/auth/dto';
+import { CompanyService } from '../../modules/company/company.service';
 
 @Injectable()
 export class AuthService {

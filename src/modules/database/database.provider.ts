@@ -1,4 +1,4 @@
-import { EnvUtils } from '@/common/utils';
+import { EnvUtils } from '../../common/utils';
 import { DynamicModule } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';

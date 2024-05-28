@@ -1,35 +1,23 @@
 import {
-  Body,
   Controller,
+  Delete,
   Get,
   Param,
-  Post,
-  Req,
+  ParseUUIDPipe,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { RoleService } from './role.service';
-import { TransformInterceptor } from '@/interceptors/response.interceptor';
-import { ResponseMessage } from '@/decorators/response_message.decorator';
-import { AuthGuard } from '@/guards';
-import { Permission } from '@/modules/role/permission.entity';
-import { Role } from '@/modules/role/role.entity';
-import { CreateRoleDto } from '@/modules/role/dto';
-import { ResponseCreateRoleDto } from '@/modules/role/dto/createRole.dto';
+import { TransformInterceptor } from '../../interceptors/response.interceptor';
+import { ResponseMessage } from '../../decorators/response_message.decorator';
+import { AuthGuard } from '../../guards';
+import { Permission } from '../../modules/role/permission.entity';
+import { GetRoleDto } from 'src/modules/role/dto/role.dto';
 
 @UseInterceptors(TransformInterceptor)
-@Controller('roles')
+@Controller('role')
 export class RoleController {
   constructor(private readonly roleService: RoleService) {}
-
-  @Post()
-  @UseGuards(AuthGuard)
-  @ResponseMessage('Rol creado con exito!')
-  async createRole(
-    @Body() createRoleDto: CreateRoleDto,
-  ): Promise<ResponseCreateRoleDto> {
-    return await this.roleService.createRole(createRoleDto);
-  }
 
   @Get('/permissions')
   @UseGuards(AuthGuard)
@@ -38,10 +26,21 @@ export class RoleController {
     return await this.roleService.getPermissions();
   }
 
-  @Get(':id')
+  @Get(':companyId')
   @UseGuards(AuthGuard)
-  @ResponseMessage('Roles de Usuario encontrados con exito!')
-  async roles(@Param() params): Promise<Role[]> {
-    return await this.roleService.getUserRoles(params.id);
+  @ResponseMessage('Permissions encontrados con exito!')
+  async getRoles(
+    @Param('companyId', new ParseUUIDPipe()) companyId: string,
+  ): Promise<GetRoleDto> {
+    return await this.roleService.getRoles(companyId);
+  }
+
+  @Delete(':id')
+  @UseGuards(AuthGuard)
+  @ResponseMessage('Role borrado con exito!')
+  async deleteRoles(
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ): Promise<void> {
+    return await this.roleService.deleteRole(id);
   }
 }

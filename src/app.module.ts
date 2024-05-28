@@ -10,7 +10,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { WhatsAppModule } from './modules/whatsapp/whatsapp.module';
 import { CorsMiddleware } from './common/middlewares/cors.middleware';
 import { CompanyModule } from './modules/company/company.module';
-import { RoleModule } from '@/modules/role/role.module';
+import { RoleModule } from './modules/role/role.module';
 
 @Module({
   imports: [

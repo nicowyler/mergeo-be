@@ -4,15 +4,17 @@ import { UserService } from './user.service';
 import { User } from './user.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EncoderService } from '../auth/encoder.service';
-import { TypedEventEmitterModule } from '@/modules/event-emitter/typed-event-emitter.module';
+import { TypedEventEmitterModule } from '../../modules/event-emitter/typed-event-emitter.module';
 import { PassportModule } from '@nestjs/passport';
 import { AuthGuard } from '../../guards/auth.guard';
 import { JwtService } from '@nestjs/jwt';
-import { Permission } from '@/modules/role/permission.entity';
-import { Role } from '@/modules/role/role.entity';
-import { Company } from '@/modules/company/company.entity';
-import { Branch } from '@/modules/company/branch.entity';
+import { Permission } from '../../modules/role/permission.entity';
+import { Role } from '../../modules/role/role.entity';
+import { Company } from '../../modules/company/company.entity';
+import { Branch } from '../../modules/company/branch.entity';
 import { CompanyService } from '../company/company.service';
+import { RoleService } from 'src/modules/role/role.service';
+import { RoleModule } from 'src/modules/role/role.module';
 
 @Module({
   imports: [
@@ -22,6 +24,7 @@ import { CompanyService } from '../company/company.service';
   ],
   controllers: [UserController],
   providers: [
+    RoleService,
     UserService,
     CompanyService,
     EncoderService,

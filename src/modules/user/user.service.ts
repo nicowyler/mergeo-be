@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   InternalServerErrorException,
@@ -9,7 +10,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { EncoderService } from '../auth/encoder.service';
 import { CreateUserDto, UpdateUserDto } from './dto';
 import { Emails, ErrorMessages } from 'src/common/enum';
-import { TypedEventEmitter } from '@/modules/event-emitter/typed-event-emitter.class';
+import { TypedEventEmitter } from '../../modules/event-emitter/typed-event-emitter.class';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { WhatsApp } from '../../common/enum/email.enum';
@@ -17,6 +18,14 @@ import { Role } from '../../modules/role/role.entity';
 import { Permission } from '../../modules/role/permission.entity';
 import { Company } from '../../modules/company/company.entity';
 import { User } from './user.entity';
+import { RoleService } from '../role/role.service';
+import {
+  AddRolesToUserDto,
+  CreateRoleDto,
+  ResponseCreateRoleDto,
+} from 'src/modules/role/dto/role.dto';
+import { plainToInstance } from 'class-transformer';
+import { CompanyService } from 'src/modules/company/company.service';
 
 @Injectable()
 export class UserService {
@@ -25,6 +34,8 @@ export class UserService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(Permission)
     private readonly permissionRepository: Repository<Permission>,
+    private readonly roleService: RoleService,
+    private readonly companyService: CompanyService,
     private encoderService: EncoderService,
     private readonly eventEmitter: TypedEventEmitter,
     private jwtTokenService: JwtService,
@@ -103,8 +114,9 @@ export class UserService {
   }
 
   async getUser(id: string): Promise<User> {
-    const user: User = await this.userRepository.findOneBy({
-      id: id,
+    const user = await this.userRepository.findOne({
+      where: { id: id },
+      relations: ['role'],
     });
 
     if (!user)
@@ -180,27 +192,86 @@ export class UserService {
     return user;
   }
 
-  async fetchUserRoles(userId: number): Promise<Role[]> {
-    try {
-      // Find the user by userId along with its associated roles
-      const user = await this.userRepository
-        .createQueryBuilder('user')
-        .leftJoinAndSelect('user.roles', 'role')
-        .where('user.id = :userId', { userId })
-        .getOne();
+  // ROLES //
+  async createUserRoles(
+    userId: string,
+    data: CreateRoleDto,
+  ): Promise<ResponseCreateRoleDto> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: ['company'],
+    });
 
-      // If user not found or user has no roles, return an empty array
-      if (!user || !user.roles) {
-        return [];
-      }
-
-      // Extract and return the roles associated with the user
-      return user.roles;
-    } catch (error) {
-      // Handle errors (e.g., database query errors)
-      console.error('Error fetching user roles:', error.message);
-      throw error;
+    if (!user) {
+      throw new NotFoundException(`${ErrorMessages.USER_NOT_FOUND} ${userId}`);
     }
+    const company = await this.companyService.getCompanyByUserId(user);
+
+    if (!user) {
+      throw new NotFoundException(`${ErrorMessages.USER_NOT_FOUND} ${userId}`);
+    }
+
+    const roleCreated = await this.roleService.createRole(
+      company.id,
+      user,
+      data,
+    );
+
+    if (!roleCreated) {
+      throw new InternalServerErrorException();
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { user: _, ...roleWithoutUser } = roleCreated;
+
+    const response = plainToInstance(ResponseCreateRoleDto, {
+      ...roleWithoutUser,
+      companyId: company.id,
+    });
+
+    return response;
+  }
+
+  async addRolesToUser(
+    userId: string,
+    rolesId: Pick<Role, 'id'>[],
+  ): Promise<User> {
+    // Fetch the user by their ID
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: ['role'], // Ensure the roles relation is loaded
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with id ${userId} not found`);
+    }
+
+    // Fetch the roles by their IDs
+    const role = await this.roleService.getRolesById(rolesId);
+
+    if (role.length !== rolesId.length) {
+      throw new BadRequestException('Some roles not found');
+    }
+
+    // Add the roles to the user
+    user.role = [...user.role, ...role];
+
+    // Save the user entity to update the relationship in the database
+    return await this.userRepository.save(user);
+  }
+
+  async deleteUserRole(id: string, roleId: string): Promise<User> {
+    const user: User = await this.getUser(id);
+    if (!user)
+      throw new NotFoundException(`${ErrorMessages.USER_NOT_FOUND} ${id}`);
+
+    const roleExists = user.role.find((userRole) => userRole.id === roleId);
+    if (!roleExists) {
+      throw new NotFoundException(`${ErrorMessages.ROLE_NOT_FOUND} ${roleId}`);
+    }
+    user.role = user.role.filter((userRole) => userRole.id !== roleId);
+    this.userRepository.save(user);
+    return user;
   }
 
   async updateUserRolePermissions(
@@ -219,7 +290,7 @@ export class UserService {
     }
 
     // Step 2: Find the role by ID
-    const role = user.roles.find((userRole) => userRole.id === roleId);
+    const role = user.role.find((userRole) => userRole.id === roleId);
     if (!role) {
       throw new Error('Role not found');
     }
@@ -268,4 +339,7 @@ export class UserService {
       product: 'fideos',
     });
   }
+}
+function omit(roleCreated: Role, arg1: string): any {
+  throw new Error('Function not implemented.');
 }

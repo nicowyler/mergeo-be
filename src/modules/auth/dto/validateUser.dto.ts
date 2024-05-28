@@ -1,4 +1,4 @@
-import { ErrorMessages } from '@/common/enum';
+import { ErrorMessages } from '../../../common/enum';
 import { IsEmail, IsNotEmpty, IsString, Length } from 'class-validator';
 
 export class ValidateUserDto {

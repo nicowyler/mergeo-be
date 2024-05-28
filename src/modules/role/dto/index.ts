@@ -1,1 +1,1 @@
-export { CreateRoleDto } from './createRole.dto';
+export { CreateRoleDto, ResponseCreateRoleDto } from './role.dto';

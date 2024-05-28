@@ -4,6 +4,7 @@ import {
   JoinTable,
   ManyToMany,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { DateAudit } from '../../common/entities/base.entity';
@@ -48,7 +49,6 @@ export class User extends DateAudit {
   @ManyToOne(() => Company, (company) => company.users)
   company: Company;
 
-  @ManyToMany(() => Role)
-  @JoinTable()
-  roles: Role[];
+  @OneToMany(() => Role, (role) => role.user)
+  role: Role[];
 }

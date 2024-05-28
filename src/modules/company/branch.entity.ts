@@ -1,7 +1,14 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  ManyToOne,
+  Unique,
+} from 'typeorm';
 import { Company } from './company.entity';
 
 @Entity()
+@Unique('UQ_NAME', ['name'])
 export class Branch {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -10,7 +17,22 @@ export class Branch {
   name: string;
 
   @Column()
+  email: string;
+
+  @Column()
+  phoneNumber: string;
+
+  @Column()
   address: string;
+
+  @Column()
+  province: string;
+
+  @Column()
+  locality: string;
+
+  @Column()
+  zipCode: number;
 
   @ManyToOne(() => Company, (company) => company.branches)
   company: Company;

@@ -1,10 +1,10 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Delete,
   Get,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   SetMetadata,
@@ -12,14 +12,14 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { UserService } from './user.service';
-import { CreateUserDto, UpdateUserDto, UserResponseDto } from './dto';
-import { TransformInterceptor } from '@/interceptors/response.interceptor';
-import { ResponseMessage } from '@/decorators/response_message.decorator';
+import { UpdateUserDto, UserResponseDto } from './dto';
+import { TransformInterceptor } from '../../interceptors/response.interceptor';
+import { ResponseMessage } from '../../decorators/response_message.decorator';
 import { plainToInstance } from 'class-transformer';
-import { GetUserDto } from './dto/get-user.dto';
-import { validate } from 'class-validator';
-import { AuthGuard } from '@/guards';
-import { PermissionsGuard } from '@/guards/permissions.guard';
+import { AuthGuard, PermissionsGuard } from '../../guards';
+import { PERMISSIONS } from '../../common/enum/permissions.enum';
+import { CreateRoleDto } from 'src/modules/role/dto';
+import { AddRolesToUserDto } from 'src/modules/role/dto/role.dto';
 
 @UseInterceptors(TransformInterceptor)
 @Controller('user')
@@ -43,40 +43,71 @@ export class UserController {
     return usersList;
   }
 
-  @Get(':id')
+  @Get('/:id')
   @ResponseMessage('Usuario encontrado!')
   @UseGuards(AuthGuard)
-  async getUser(@Param() params): Promise<UserResponseDto> {
-    const idInstance = plainToInstance(GetUserDto, params);
-    const isValidUUID = await validate(idInstance);
-    if (isValidUUID.length) {
-      throw new BadRequestException(isValidUUID[0].constraints.isUuid);
-    }
-    const user = await this.userService.getUser(idInstance.id);
+  async getUser(
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ): Promise<UserResponseDto> {
+    const user = await this.userService.getUser(id);
     return plainToInstance(UserResponseDto, user);
   }
 
-  @Patch(':id')
+  @Patch('/:id')
+  @SetMetadata('permissions', [PERMISSIONS.EDIT_USERS])
+  @UseGuards(AuthGuard, PermissionsGuard)
   @ResponseMessage('Usuario actualizado!')
-  @UseGuards(AuthGuard)
   async editUser(
-    @Param('id') id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
     @Body() body: UpdateUserDto,
   ): Promise<UpdateUserDto> {
     const updatedUser = await this.userService.editUser(id, body);
     return plainToInstance(UpdateUserDto, updatedUser);
   }
 
-  @Delete(':id')
-  @SetMetadata('permissions', ['DELETE_USERS'])
+  @Delete('/:id')
+  @SetMetadata('permissions', [PERMISSIONS.DELETE_USERS])
   @UseGuards(AuthGuard, PermissionsGuard)
   @ResponseMessage('El usuario a sido borrado con exito!')
-  async removeUser(@Param('id') id: string): Promise<UserResponseDto> {
+  async removeUser(
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ): Promise<UserResponseDto> {
     const deletedUser = await this.userService.removeUser(id);
     const userResponseDto = new UserResponseDto();
     userResponseDto.id = deletedUser.id;
 
     return userResponseDto;
+  }
+
+  // ----- ROLES ----- //
+  @Post('/:id/role')
+  @ResponseMessage('Role creado con exito!')
+  async createUserRole(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: CreateRoleDto,
+  ): Promise<UserResponseDto> {
+    const createdRole = await this.userService.createUserRoles(id, body);
+    return plainToInstance(UserResponseDto, createdRole);
+  }
+
+  @Delete('/:id/role/:roleId')
+  @ResponseMessage('Role borrado con exito!')
+  async deleteUserRole(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('roleId', new ParseUUIDPipe()) roleId: string,
+  ): Promise<UserResponseDto> {
+    const deletedRole = await this.userService.deleteUserRole(id, roleId);
+    return plainToInstance(UserResponseDto, deletedRole);
+  }
+
+  @Patch('/:id/addRole')
+  @ResponseMessage('Role agregado con exito!')
+  async updateUserRole(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: AddRolesToUserDto,
+  ): Promise<UserResponseDto> {
+    const updatedRole = await this.userService.addRolesToUser(id, body.roles);
+    return plainToInstance(UserResponseDto, updatedRole);
   }
 
   @Post('/testEmail')

@@ -1,8 +1,9 @@
-import { ACCOUNT_TYPE } from '@/common/enum';
-import { IsEmail, IsEnum, IsNotEmpty, IsString } from 'class-validator';
+import { ACCOUNT_TYPE } from '../../../common/enum';
+import { IsEmail, IsEnum, IsNotEmpty, IsString, IsUUID } from 'class-validator';
 
 export class UserDto {
   @IsNotEmpty()
+  @IsUUID('4')
   id: string;
 
   @IsNotEmpty()

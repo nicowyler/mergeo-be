@@ -1,4 +1,4 @@
-import { EventPayloads } from '@/common/interface/event-types.interface';
+import { EventPayloads } from '../../common/interface/event-types.interface';
 import { MailerService } from '@nestjs-modules/mailer';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
