@@ -46,6 +46,28 @@ export class EmailService {
     });
   }
 
+  @OnEvent('user.invited')
+  async invitedUserEmail(data: EventPayloads['user.invited']) {
+    const { email, owner, company, password } = data;
+
+    const subject = `Bienvenido a Mergeo!`;
+
+    await this.mailerService.sendMail({
+      to: email,
+      subject,
+      sender: 'Mergeo',
+      template: './templates/main',
+      context: {
+        template: './partials/user-invited',
+        email,
+        owner,
+        company,
+        password,
+        link: `${this.config.get('USER_HOST')}/change-password`,
+      },
+    });
+  }
+
   @OnEvent('user.verify-email')
   async verifyEmail(data: EventPayloads['user.verify-email']) {
     const { email, name, activationCode } = data;

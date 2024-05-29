@@ -2,6 +2,8 @@ import {
   Body,
   Controller,
   Get,
+  Param,
+  ParseUUIDPipe,
   Post,
   Req,
   Request,
@@ -26,6 +28,7 @@ import { AuthGuard } from '../../guards';
 import { AuthenticatedRequest } from '../../common/interface/AuthenticatedRequest.inteeface';
 import { UserService } from '../../modules/user/user.service';
 import {
+  AddUserDto,
   AuthDto,
   RefreshTokenDto,
   RefreshTokenResponseDto,
@@ -65,6 +68,16 @@ export class AuthController {
   @Post('/register/company')
   async registerCompany(@Body() regiserCompanyDto: RegisterCompanyDto) {
     await this.authService.registerCompany(regiserCompanyDto);
+    return {};
+  }
+
+  @ResponseMessage('Usuaurio Agregado!')
+  @Post(':id/add/user')
+  async addNewUser(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() addUserDto: AddUserDto,
+  ) {
+    await this.authService.addUser(id, addUserDto);
     return {};
   }
 

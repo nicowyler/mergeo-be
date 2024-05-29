@@ -20,13 +20,13 @@ export class User extends DateAudit {
   @Column({ unique: true, nullable: false })
   email: string;
 
-  @Column({ nullable: false })
+  @Column({ default: null })
   firstName: string;
 
-  @Column({ nullable: false })
+  @Column({ default: null })
   lastName: string;
 
-  @Column({ nullable: false })
+  @Column({ default: null })
   phoneNumber: string;
 
   @Column({ nullable: false })

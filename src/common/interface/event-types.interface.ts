@@ -6,6 +6,14 @@ export interface EventPayloads {
     template?: string;
   };
   'user.reset-password': { email: string; link?: string; template?: string };
+  'user.invited': {
+    email: string;
+    password: string;
+    owner: string;
+    company: string;
+    link?: string;
+    template?: string;
+  };
   'user.verify-email': {
     name: string;
     email: string;

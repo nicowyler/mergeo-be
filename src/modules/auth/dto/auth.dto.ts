@@ -1,5 +1,15 @@
-import { ACCOUNT_TYPE } from '../../../common/enum';
-import { IsEmail, IsEnum, IsNotEmpty, IsString, IsUUID } from 'class-validator';
+import { CreateUserDto } from 'src/modules/user/dto';
+import { ACCOUNT_TYPE, ErrorMessages } from '../../../common/enum';
+import {
+  IsEmail,
+  IsEnum,
+  IsNotEmpty,
+  IsString,
+  IsUUID,
+  Length,
+} from 'class-validator';
+import { CreateCompanyDto } from 'src/modules/company/dto';
+import { Exclude } from 'class-transformer';
 
 export class UserDto {
   @IsNotEmpty()
@@ -44,4 +54,50 @@ export class RefreshTokenResponseDto {
 
 export class RefreshTokenDto {
   user: UserDto;
+}
+
+export class RegisterUserDto extends CreateUserDto {
+  @IsUUID('4')
+  companyId: string;
+}
+
+export class RegisterCompanyDto extends CreateCompanyDto {}
+
+export class AddUserDto {
+  @IsUUID('4')
+  companyId: string;
+
+  @IsEmail()
+  email: string;
+}
+
+export class LoginDto {
+  @IsNotEmpty()
+  @IsEmail()
+  email: string;
+
+  @IsString()
+  @IsNotEmpty()
+  password: string;
+}
+
+export class NewPasswordDto extends LoginDto {
+  @Exclude()
+  email: string;
+}
+
+export class PasswordRecoverDto extends LoginDto {
+  @Exclude()
+  password: string;
+}
+
+export class ValidateUserDto {
+  @IsNotEmpty()
+  @IsEmail()
+  email: string;
+
+  @IsNotEmpty()
+  @IsString()
+  @Length(6, 6, { message: ErrorMessages.ACTIVATION_CODE_LENGTH })
+  activationCode: string;
 }

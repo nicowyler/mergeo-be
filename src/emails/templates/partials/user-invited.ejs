@@ -1,0 +1,81 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <%- include("../shared/head.ejs") %>
+  <body>
+    <table
+      class="email-wrapper"
+      width="100%"
+      cellpadding="0"
+      cellspacing="0"
+      role="presentation"
+    >
+      <tr>
+        <td align="center">
+          <table
+            class="email-content"
+            width="100%"
+            cellpadding="0"
+            cellspacing="0"
+            role="presentation"
+          >
+            <tr>
+              <td class="email-masthead">
+                <a
+                  href="https://example.com"
+                  class="f-fallback email-masthead_name"
+                >
+                  Bienvenido a Mergeo!
+                </a>
+              </td>
+            </tr>
+            <!-- Email Body -->
+            <tr>
+              <td
+                class="email-body"
+                width="570"
+                cellpadding="0"
+                cellspacing="0"
+              >
+                <table
+                  class="email-body_inner"
+                  align="center"
+                  width="570"
+                  cellpadding="0"
+                  cellspacing="0"
+                  role="presentation"
+                >
+                  <!-- Body content -->
+                  <tr>
+                    <td class="content-cell">
+                      <div class="f-fallback">
+                        <h1>Hola, <%= locals.email %>!</h1>
+                        <p>
+                          <%= locals.owner %> te agrego a <%= locals.company %> para que puedas participar de sus proyectos.
+                        </p>
+
+                        <p>
+                          Tu usuario es <%= locals.email %>. y tu contraseña es <%= locals.password %>.
+                          Para iniciar sesion, <a href="<%= locals.link %>">haz click aqui</a>.
+                        </p>
+
+                        <p>
+                          Si tienes alguna pregunta o necesitas ayuda
+                          <a href="mailto:support@@company.com"
+                            >manda un email a nuestro equipo de soporte</a
+                          >.
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <%- include("./shared/footer.ejs") %>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

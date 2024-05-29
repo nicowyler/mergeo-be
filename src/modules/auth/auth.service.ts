@@ -9,8 +9,12 @@ import { EncoderService } from '../../modules/auth/encoder.service';
 import { ConfigService } from '@nestjs/config';
 import { ErrorMessages } from '../../common/enum';
 import { User } from '../user/user.entity';
-import { UserDto } from './dto/auth.dto';
-import { RegisterCompanyDto, RegisterUserDto } from '../../modules/auth/dto';
+import {
+  AddUserDto,
+  RegisterCompanyDto,
+  RegisterUserDto,
+  UserDto,
+} from '../../modules/auth/dto';
 import { CompanyService } from '../../modules/company/company.service';
 
 @Injectable()
@@ -33,6 +37,14 @@ export class AuthService {
 
   async registerCompany(regiserDto: RegisterCompanyDto): Promise<any> {
     await this.companyService.createCompany(regiserDto);
+  }
+
+  async addUser(id: string, userDto: AddUserDto): Promise<any> {
+    const company = await this.companyService.getCompanyById(userDto.companyId);
+
+    await this.userService.addNewUser(id, userDto, company);
+
+    return;
   }
 
   async validateUserEmail(email: string, activationCode: string): Promise<any> {

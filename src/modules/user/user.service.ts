@@ -20,12 +20,13 @@ import { Company } from '../../modules/company/company.entity';
 import { User } from './user.entity';
 import { RoleService } from '../role/role.service';
 import {
-  AddRolesToUserDto,
   CreateRoleDto,
   ResponseCreateRoleDto,
 } from 'src/modules/role/dto/role.dto';
 import { plainToInstance } from 'class-transformer';
 import { CompanyService } from 'src/modules/company/company.service';
+import { AddUserDto } from 'src/modules/auth/dto';
+import { passwordGen } from 'src/common/utils';
 
 @Injectable()
 export class UserService {
@@ -69,6 +70,41 @@ export class UserService {
         name: createUserDto.firstName,
         email: createUserDto.email,
         activationCode: activationCode,
+      });
+      await this.userRepository.save(user);
+    } catch (error) {
+      if (error.code === '23505')
+        throw new ConflictException(ErrorMessages.USER_EMAIL_EXISTS);
+      else {
+        throw new InternalServerErrorException();
+      }
+    }
+  }
+
+  async addNewUser(id: string, userDto: AddUserDto, company: Company) {
+    const password = passwordGen(12);
+    const hashedPassword = await this.encoderService.encodePassword(password);
+
+    const owner = await this.userRepository.findOne({
+      where: { id: id },
+    });
+
+    if (!owner) {
+      throw new NotFoundException(`${ErrorMessages.USER_NOT_FOUND} ${id}`);
+    }
+
+    const user = this.userRepository.create({
+      ...userDto,
+      company,
+      password: hashedPassword,
+    });
+
+    try {
+      this.eventEmitter.emit('user.invited', {
+        email: userDto.email,
+        owner: `${owner.firstName} ${owner.lastName}`,
+        company: company.name,
+        password: password,
       });
       await this.userRepository.save(user);
     } catch (error) {
@@ -315,18 +351,28 @@ export class UserService {
     const indexOfS = Object.values(Emails).indexOf(type as unknown as Emails);
     const emailType: string = Object.values(Emails)[indexOfS];
 
-    if (emailType === Emails.VerifyEmail) {
-      this.eventEmitter.emit(Emails.VerifyEmail, {
-        name: 'nicolas',
-        email: 'nicolaswyler@gmail.com',
-        activationCode: '198212',
-        link: 'http:localhost/veify?token=tokendeprueb',
-      });
-    }
-    if (type === Emails.ResetPassword) {
-      this.eventEmitter.emit(Emails.ResetPassword, {
-        email: 'nicolaswyler@gmail.com',
-      });
+    switch (emailType) {
+      case Emails.VerifyEmail:
+        this.eventEmitter.emit(Emails.VerifyEmail, {
+          name: 'nicolas',
+          email: 'nicolaswyler@gmail.com',
+          activationCode: '198212',
+          link: 'http:localhost/veify?token=tokendeprueb',
+        });
+        break;
+      case Emails.ResetPassword:
+        this.eventEmitter.emit(Emails.ResetPassword, {
+          email: 'nicolaswyler@gmail.com',
+        });
+        break;
+      case Emails.Invited:
+        this.eventEmitter.emit(Emails.Invited, {
+          email: 'fuegos12dejulio@gmail.com',
+          owner: 'Nicolas Wyler',
+          company: 'Fuegos 12 de Julio',
+          password: '123456',
+        });
+        break;
     }
   }
 
@@ -339,7 +385,4 @@ export class UserService {
       product: 'fideos',
     });
   }
-}
-function omit(roleCreated: Role, arg1: string): any {
-  throw new Error('Function not implemented.');
 }
