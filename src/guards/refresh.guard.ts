@@ -6,10 +6,9 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { extractTokenFromHeader } from '../common/utils/token.utils';
 import { Reflector } from '@nestjs/core';
 import { ACCOUNT_TYPE } from '../common/enum';
-import { checkRoles } from '../common/utils';
+import { TokenUtils, checkRoles } from '../common/utils';
 
 @Injectable()
 export class RefreshGuard implements CanActivate {
@@ -26,7 +25,7 @@ export class RefreshGuard implements CanActivate {
       context.getHandler(),
     ) || [ACCOUNT_TYPE.USER, ACCOUNT_TYPE.PROVIDER];
 
-    const token = extractTokenFromHeader(request);
+    const token = TokenUtils.extractTokenFromCookies(request, 'refresh');
 
     if (!token) {
       throw new UnauthorizedException('Please provide token');

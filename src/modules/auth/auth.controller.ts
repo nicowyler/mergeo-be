@@ -7,12 +7,14 @@ import {
   Post,
   Req,
   Request,
+  Res,
   UnauthorizedException,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { ResponseMessage } from '../../decorators/response_message.decorator';
+import { Response, response } from 'express';
 import {
   LoginDto,
   NewPasswordDto,
@@ -55,6 +57,32 @@ export class AuthController {
     if (!validUser) {
       throw new UnauthorizedException();
     }
+
+    const tokens = await this.authService.generateAccessToken(validUser);
+    const {
+      id,
+      firstName,
+      lastName,
+      email: userEmail,
+      accountType,
+    } = validUser;
+
+    const authDto = new AuthDto();
+
+    authDto.user = {
+      id: id,
+      email: userEmail,
+      accountType: accountType,
+      name: `${firstName} ${lastName}`,
+    };
+
+    response.cookie('tokens', tokens, {
+      httpOnly: true,
+      sameSite: false,
+      secure: true,
+    });
+
+    return authDto;
   }
 
   @ResponseMessage('Usuario Registrado!')
@@ -83,14 +111,16 @@ export class AuthController {
 
   @Post('/login')
   @ResponseMessage('Usuario Logueado!')
-  async login(@Body() loginDto: LoginDto): Promise<AuthDto> {
+  async login(
+    @Body() loginDto: LoginDto,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<AuthDto> {
     const { email, password } = loginDto;
     const validUser = await this.authService.validateUser(email, password);
     if (!validUser) {
       throw new UnauthorizedException();
     }
     const tokens = await this.authService.generateAccessToken(validUser);
-    const authDto = new AuthDto();
     const {
       id,
       firstName,
@@ -99,13 +129,20 @@ export class AuthController {
       accountType,
     } = validUser;
 
+    response.cookie('tokens', tokens, {
+      httpOnly: true,
+      sameSite: false,
+      secure: true,
+    });
+
+    const authDto = new AuthDto();
     authDto.user = {
       id: id,
       email: userEmail,
       accountType: accountType,
       name: `${firstName} ${lastName}`,
     };
-    authDto.tokens = tokens;
+
     return authDto;
   }
 
@@ -145,7 +182,8 @@ export class AuthController {
   @ResponseMessage('Token refresh success!')
   async refreshToken(
     @Request() req: RefreshTokenDto,
-  ): Promise<RefreshTokenResponseDto> {
+    @Res({ passthrough: true }) response: Response,
+  ) {
     console.log('refreshed');
     const tokens = await this.authService.generateAccessToken(req.user);
     const { access_token, refresh_token, expiresIn } = tokens;
@@ -156,6 +194,12 @@ export class AuthController {
       expiresIn,
     };
 
-    return refreshTokenDto;
+    response.cookie('tokens', tokens, {
+      httpOnly: true,
+      sameSite: false,
+      secure: true,
+    });
+
+    return true;
   }
 }

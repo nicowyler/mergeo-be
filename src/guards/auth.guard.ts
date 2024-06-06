@@ -7,8 +7,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { extractTokenFromHeader } from '../common/utils/token.utils';
-import { checkRoles } from '../common/utils';
+import { TokenUtils } from 'src/common/utils';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -21,11 +20,11 @@ export class AuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
 
-    const token = extractTokenFromHeader(request);
-    if (!token) {
-      throw new UnauthorizedException('Please provide token');
-    }
     try {
+      const token = TokenUtils.extractTokenFromCookies(request, 'access');
+      if (!token) {
+        throw new UnauthorizedException('Please provide token');
+      }
       this.payload = await this.jwtService.verifyAsync(token, {
         secret: this.configService.get('SECRET'),
       });

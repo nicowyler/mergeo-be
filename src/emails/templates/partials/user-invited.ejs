@@ -1,81 +1,166 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
-  <%- include("../shared/head.ejs") %>
-  <body>
-    <table
-      class="email-wrapper"
-      width="100%"
-      cellpadding="0"
-      cellspacing="0"
-      role="presentation"
-    >
-      <tr>
-        <td align="center">
-          <table
-            class="email-content"
-            width="100%"
-            cellpadding="0"
-            cellspacing="0"
-            role="presentation"
-          >
+<!-- IMAGEN Y TITULO -->
+<table class="row row-4" align="center" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation"
+  style="mso-table-lspace: 0pt; mso-table-rspace: 0pt; ">
+  <tbody>
+    <tr>
+      <td>
+        <table class="row-content stack" align="center" border="0" cellpadding="0" cellspacing="0" role="presentation"
+          style="mso-table-lspace: 0pt; mso-table-rspace: 0pt; background-color: #fff; color: #000000; width: 640px; margin: 0 auto;"
+          width="640">
+          <tbody>
             <tr>
-              <td class="email-masthead">
-                <a
-                  href="https://example.com"
-                  class="f-fallback email-masthead_name"
-                >
-                  Bienvenido a Mergeo!
-                </a>
+              <td class="column column-1" width="100%"
+                style="mso-table-lspace: 0pt; mso-table-rspace: 0pt; font-weight: 400; text-align: left; vertical-align: top; border-top: 0px; border-right: 0px; border-bottom: 0px; border-left: 0px;">
+
+                <table class="image_block block-2" width="100%" border="0" cellpadding="0" cellspacing="0"
+                  role="presentation" style="mso-table-lspace: 0pt; mso-table-rspace: 0pt;">
+                  <tbody>
+                    <tr>
+                      <td height="40" style="padding-top:0px;padding-right:0px;padding-bottom:0px;padding-left:0px;">
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="pad" style="padding-left:40px;padding-right:40px;width:100%;">
+                        <div class="alignment" align="center" style="line-height:10px">
+                          <div class="fullWidth" style="max-width: 600px;">
+                            <img src="https://drive.google.com/uc?export=view&id=12erjzZ44OsT11Iv5t9fzor7ongKOb8I1"
+                              style="display: block; height: auto; border: 0; width: 100%;" width="352"
+                              alt="I'm an image" title="I'm an image" />
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td height="40" style="padding-top:0px;padding-right:0px;padding-bottom:0px;padding-left:0px;">
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+
               </td>
             </tr>
-            <!-- Email Body -->
+          </tbody>
+        </table>
+      </td>
+    </tr>
+  </tbody>
+</table>
+<!-- CODIGO -->
+<table class="row row-5" align="center" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation"
+  style="mso-table-lspace: 0pt; mso-table-rspace: 0pt;">
+  <tbody>
+    <tr>
+      <td>
+        <table class="row-content stack" align="center" border="0" cellpadding="0" cellspacing="0" role="presentation"
+          style="mso-table-lspace: 0pt; mso-table-rspace: 0pt; width: 640px; margin: 0 auto;" width="640">
+          <tbody>
             <tr>
-              <td
-                class="email-body"
-                width="570"
-                cellpadding="0"
-                cellspacing="0"
-              >
-                <table
-                  class="email-body_inner"
-                  align="center"
-                  width="570"
-                  cellpadding="0"
-                  cellspacing="0"
-                  role="presentation"
-                >
-                  <!-- Body content -->
-                  <tr>
-                    <td class="content-cell">
-                      <div class="f-fallback">
-                        <h1>Hola, <%= locals.email %>!</h1>
-                        <p>
-                          <%= locals.owner %> te agrego a <%= locals.company %> para que puedas participar de sus proyectos.
-                        </p>
+              <td class="column column-1" width="100%"
+                style="mso-table-lspace: 0pt; mso-table-rspace: 0pt; font-weight: 400; text-align: left; vertical-align: top; border-top: 0px; border-bottom: 0px;">
 
-                        <p>
-                          Tu usuario es <%= locals.email %>. y tu contraseña es <%= locals.password %>.
-                          Para iniciar sesion, <a href="<%= locals.link %>">haz click aqui</a>.
-                        </p>
-
-                        <p>
-                          Si tienes alguna pregunta o necesitas ayuda
-                          <a href="mailto:support@@company.com"
-                            >manda un email a nuestro equipo de soporte</a
-                          >.
-                        </p>
-                      </div>
-                    </td>
-                  </tr>
+                <table class="paragraph_block block-2" width="100%" border="0" cellpadding="0" cellspacing="0"
+                  role="presentation" style="mso-table-lspace: 0pt; mso-table-rspace: 0pt; word-break: break-word;">
+                  <tbody>
+                    <tr>
+                      <td class="shadow" style="padding:50px; border-radius: 5px; background-color: #ffffff;">
+                        <div>
+                          <p style="margin: 0; word-break: break-word; font-size: 22px; color: #444a5b;">
+                            Bienvenido
+                            <span>
+                              <a href="#" class="email-text" style="color: #1B2266;">
+                                <%= locals.email %>
+                              </a>
+                            </span>
+                            a Mergeo!!!
+                          </p>
+                          <p style="color: #444a5b; font-size: 18px;">
+                            <span class="roboto-bold">
+                              <%= locals.owner %>
+                            </span>
+                            te agrego a
+                            <span class="roboto-bold email-text">
+                              <%= locals.company %>
+                            </span>
+                            para que puedas participar de sus proyectos.
+                          </p>
+                          <p style="text-align: center; font-size: 24px; color: #444a5b;">
+                            Tu usuario es </br>
+                            <span>
+                              <a href="#" class="email-text roboto-bold txt-green">
+                                <%= locals.email %>
+                              </a>
+                            </span>
+                          </p>
+                          <p style="text-align: center; font-size: 24px; color: #444a5b;">
+                            Tu contraseña es </br>
+                            <span class="roboto-bold txt-green">
+                              <%= locals.password %>
+                            </span>
+                          </p>
+                          <p style="text-align: center; font-size: 18px; color: #444a5b;">
+                            Para iniciar sesion haz clcik en el boton de abajo
+                          </p>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
                 </table>
               </td>
             </tr>
             <tr>
-              <%- include("./shared/footer.ejs") %>
+              <td height="10" style="padding-top:0px;padding-right:0px;padding-bottom:0px;padding-left:0px;"></td>
             </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-  </body>
-</html>
+          </tbody>
+        </table>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- BOTON -->
+<table class="row row-6" align="center" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation"
+  style="mso-table-lspace: 0pt; mso-table-rspace: 0pt;">
+  <tbody>
+    <tr>
+      <td>
+        <table class="row-content stack" align="center" border="0" cellpadding="0" cellspacing="0" role="presentation"
+          style="mso-table-lspace: 0pt; mso-table-rspace: 0pt; background-color: #fff; color: #000000; width: 640px; margin: 0 auto;"
+          width="640">
+          <tbody>
+            <tr>
+              <td class="column column-1" width="100%"
+                style="mso-table-lspace: 0pt; mso-table-rspace: 0pt; font-weight: 400; text-align: left; vertical-align: top; border-top: 0px; border-right: 0px; border-bottom: 0px; border-left: 0px;">
+                <table class="button_block block-1" width="100%" border="0" cellpadding="0" cellspacing="0"
+                  role="presentation" style="mso-table-lspace: 0pt; mso-table-rspace: 0pt;">
+                  <tbody>
+                    <tr>
+                      <td class="pad" style="padding: 20px 0 50px 0;">
+                        <div class="alignment" align="center"><!--[if mso]>
+                                                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="localhost" style="height:62px;width:161px;v-text-anchor:middle;" arcsize="97%" stroke="false" fillcolor="#12B148">
+                                                    <w:anchorlock/>
+                                                    <v:textbox inset="0px,0px,0px,0px">
+                                                    <center style="color:#ffffff; font-family:Tahoma, sans-serif; font-size:16px">
+                                                    <![endif]-->
+                          <a class="roboto-regular" href="<%= locals.link %>"
+                            style="text-decoration:none;display:inline-block;color:#ffffff;background-color:#12B148;border-radius:5px; width:auto; padding:5px;font-family:Montserrat, Trebuchet MS, Lucida Grande, Lucida Sans Unicode, Lucida Sans, Tahoma, sans-serif;font-size:16px;text-align:center;mso-border-alt:none;word-break:keep-all;"><span
+                              style="padding-left:30px;padding-right:30px;font-size:16px;display:inline-block;letter-spacing:normal;">
+                              <span style="margin: 0; word-break: break-word; line-height: 32px;">
+                                <strong>
+                                  Iniciar sesion
+                                </strong>
+                              </span>
+                            </span>
+                          </a><!--[if mso]></center></v:textbox></v:roundrect><![endif]-->
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </td>
+    </tr>
+  </tbody>
+</table>
