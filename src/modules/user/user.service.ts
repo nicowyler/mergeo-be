@@ -4,6 +4,7 @@ import {
   Injectable,
   InternalServerErrorException,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -145,6 +146,30 @@ export class UserService {
     }
   }
 
+  async resendPasswordRecover(email: string, token: string) {
+    const hashedToken = this.jwtTokenService.sign(
+      { token },
+      {
+        secret: this._config.get('SECRET_PASSWORD_RESET'),
+        expiresIn: this._config.get('SECRET_PASSWORD_RESET_EXPIRATION'),
+      },
+    );
+    try {
+      this.eventEmitter.emit(Emails.ResetPassword, {
+        link: `${this._config.get(
+          'USER_HOST',
+        )}/passwordReset?token=${hashedToken}`,
+        email: email,
+      });
+    } catch (error) {
+      if (error.code === '23502') {
+        throw new NotFoundException(`${ErrorMessages.USER_NOT_FOUND} ${id}`);
+      } else {
+        throw new InternalServerErrorException();
+      }
+    }
+  }
+
   async getUsers(): Promise<User[]> {
     return this.userRepository.find();
   }
@@ -187,9 +212,22 @@ export class UserService {
     }
   }
 
-  async changePasword(id: string, password: string): Promise<boolean> {
+  async changePasword(
+    id: string,
+    oldPassword: string,
+    newPassword: string,
+  ): Promise<boolean> {
     try {
-      const hashedPassword = await this.encoderService.encodePassword(password);
+      const user = await this.getUser(id);
+      if (user?.password !== oldPassword) {
+        throw new UnauthorizedException(
+          "Old password and new one doesen't match",
+        );
+      }
+
+      const hashedPassword = await this.encoderService.encodePassword(
+        newPassword,
+      );
       await this.userRepository.save({
         id,
         ...{ password: hashedPassword },

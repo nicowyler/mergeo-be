@@ -17,8 +17,8 @@ export class CreateCompanyDto {
   razonSocial: string;
 
   @IsNotEmpty()
-  @IsNumber()
-  cuit: number;
+  @IsString()
+  cuit: string;
 
   @IsNotEmpty()
   @IsString()
@@ -33,8 +33,7 @@ export class CreateCompanyDto {
   locality: string;
 
   @IsNotEmpty()
-  @IsMobilePhone('es-AR')
-  phoneNumber: string;
+  address: string;
 
   @IsNotEmpty()
   @IsString()

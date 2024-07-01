@@ -13,11 +13,13 @@ import { Company } from '../../modules/company/company.entity';
 import { Branch } from '../../modules/company/branch.entity';
 import { RoleService } from 'src/modules/role/role.service';
 import { Role } from 'src/modules/role/role.entity';
+import { HttpModule } from '@nestjs/axios';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User, Company, Branch, Permission, Role]),
     AuthProvider,
+    HttpModule,
   ],
   providers: [
     AuthService,

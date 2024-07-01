@@ -10,7 +10,6 @@ import {
 import { User } from '../../modules/user/user.entity';
 
 @Entity()
-@Unique('UQ_COMPANY_NAME', ['name'])
 @Unique('UQ_BUSINESS_NAME', ['razonSocial'])
 @Unique('UQ_CUIT', ['cuit'])
 export class Company extends DateAudit {
@@ -36,7 +35,7 @@ export class Company extends DateAudit {
   locality: string;
 
   @Column()
-  phoneNumber: string;
+  address: string;
 
   @Column()
   activity: string;

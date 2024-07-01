@@ -23,7 +23,7 @@ export class RefreshGuard implements CanActivate {
     const accountType = this.reflector.get(
       'account_type',
       context.getHandler(),
-    ) || [ACCOUNT_TYPE.USER, ACCOUNT_TYPE.PROVIDER];
+    ) || [ACCOUNT_TYPE.CLIENT, ACCOUNT_TYPE.PROVIDER];
 
     const token = TokenUtils.extractTokenFromCookies(request, 'refresh');
 

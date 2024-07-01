@@ -5,6 +5,7 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Query,
   Req,
   Request,
   Res,
@@ -36,6 +37,7 @@ import {
   RefreshTokenResponseDto,
 } from './dto/auth.dto';
 import { RefreshGuard } from '../../guards/refresh.guard';
+import { Emails } from 'src/common/enum';
 @UseInterceptors(TransformInterceptor)
 @Controller('auth')
 export class AuthController {
@@ -57,32 +59,6 @@ export class AuthController {
     if (!validUser) {
       throw new UnauthorizedException();
     }
-
-    const tokens = await this.authService.generateAccessToken(validUser);
-    const {
-      id,
-      firstName,
-      lastName,
-      email: userEmail,
-      accountType,
-    } = validUser;
-
-    const authDto = new AuthDto();
-
-    authDto.user = {
-      id: id,
-      email: userEmail,
-      accountType: accountType,
-      name: `${firstName} ${lastName}`,
-    };
-
-    response.cookie('tokens', tokens, {
-      httpOnly: true,
-      sameSite: false,
-      secure: true,
-    });
-
-    return authDto;
   }
 
   @ResponseMessage('Usuario Registrado!')
@@ -95,8 +71,10 @@ export class AuthController {
   @ResponseMessage('Compania Registrada!')
   @Post('/register/company')
   async registerCompany(@Body() regiserCompanyDto: RegisterCompanyDto) {
-    await this.authService.registerCompany(regiserCompanyDto);
-    return {};
+    const response = await this.authService.registerCompany(regiserCompanyDto);
+    return {
+      companyId: response.id,
+    };
   }
 
   @ResponseMessage('Usuaurio Agregado!')
@@ -150,30 +128,25 @@ export class AuthController {
   @ResponseMessage('Email de de recuperacion de password enviado!')
   async editPassword(@Body() passwordRecoverDto: PasswordRecoverDto) {
     const { email } = passwordRecoverDto;
-    const validEmail = await this.authService.isValidEmail(email);
+    const token = await this.authService.resetPasswordTokenGeneration(email);
 
-    if (validEmail) {
-      this.eventEmitter.emit('user.reset-password', {
-        link: `${this.config.get('USER_HOST')}?token=${validEmail.password}`,
+    if (token) {
+      this.eventEmitter.emit(Emails.ResetPassword, {
+        link: `${this.config.get('USER_HOST')}/passwordReset?token=${token}`,
         email: email,
       });
     }
   }
 
   @Post('/new-password')
-  @UseGuards(AuthGuard)
   @ResponseMessage('Tu contraseña ha sido cambiada con exito!')
-  async changePassword(
-    @Req() request: AuthenticatedRequest,
-    @Body() newPasswordDto: NewPasswordDto,
-  ) {
-    const { email } = request.user;
-    const { password } = newPasswordDto;
+  async changePassword(@Body() newPasswordDto: NewPasswordDto) {
+    const { password: newPassword, token } = newPasswordDto;
+    const { password: oldPassword, id } =
+      await this.authService.newPasswordTokenVerification(token);
 
-    const isValidUser = await this.authService.isValidEmail(email);
-
-    if (isValidUser) {
-      await this.userService.changePasword(isValidUser.id, password);
+    if (oldPassword) {
+      await this.userService.changePasword(id, oldPassword, newPassword);
     }
   }
 
@@ -201,5 +174,13 @@ export class AuthController {
     });
 
     return true;
+  }
+
+  @Get('/helpers')
+  @ResponseMessage('Helpers success!')
+  async helpers(@Query() query: { type?: string; params?: string }) {
+    const { type, params } = query;
+    const response = await this.authService.helpers(type, params);
+    return response;
   }
 }

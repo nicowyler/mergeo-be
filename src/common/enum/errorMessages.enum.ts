@@ -4,6 +4,8 @@ export enum ErrorMessages {
   USER_EMAIL_EXISTS = 'El email ya existe!',
   USER_EMAIL_NOT_VERIFIED = 'El email no ha sido verificado!',
   USER_NOT_AUTH = 'El email o la contraseña son invalidos!',
+  USER_PASSWORD_RESET_LINK_EXPIRED = 'El link de reseteo de password ha expirado!',
+  USER_PASSWORD_RESET_LINK_NOT_VALID = 'El link de reseteo de password no es valido!',
 
   // COMPANY
   COMPANY_NOT_FOUND = 'No se encontro ninguna compania con el id',
@@ -23,4 +25,9 @@ export enum ErrorMessages {
   ACTIVATION_CODE_NOT_VALID = 'El codigo de validacion es incorrecto!',
   ACTIVATION_CODE_EXPIRED = 'El codido de verificacion expiro!',
   ACCOUNT_ALREADY_VALIDATED = 'La cuenta ya fue validada',
+
+  // DTO VALIDATIONS
+  IS_UUID = 'El ID de la compania es invalido',
+  ACCOUNT_TYPE = 'Los tipos de cuenta permitidos son:',
+  PHONE_FORMAT = 'El formato del telefono es invalido',
 }

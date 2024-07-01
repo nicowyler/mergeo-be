@@ -1,4 +1,4 @@
-import { ACCOUNT_TYPE } from '../../../common/enum';
+import { ACCOUNT_TYPE, ErrorMessages } from '../../../common/enum';
 import { Exclude } from 'class-transformer';
 
 import {
@@ -33,7 +33,7 @@ export class CreateUserDto {
   lastName: string;
 
   @IsNotEmpty()
-  @IsMobilePhone('es-AR')
+  @IsMobilePhone('es-AR', { strictMode: false })
   phoneNumber: string;
 
   @IsNotEmpty()

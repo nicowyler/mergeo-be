@@ -24,7 +24,9 @@ export class UserDto {
   name: string;
 
   @IsNotEmpty()
-  @IsEnum(ACCOUNT_TYPE)
+  @IsEnum(ACCOUNT_TYPE, {
+    message: `${ErrorMessages.ACCOUNT_TYPE} ${ACCOUNT_TYPE.CLIENT} o ${ACCOUNT_TYPE.PROVIDER}`,
+  })
   accountType?: string[];
 }
 
@@ -57,14 +59,14 @@ export class RefreshTokenDto {
 }
 
 export class RegisterUserDto extends CreateUserDto {
-  @IsUUID('4')
+  @IsUUID('4', { message: ErrorMessages.IS_UUID })
   companyId: string;
 }
 
 export class RegisterCompanyDto extends CreateCompanyDto {}
 
 export class AddUserDto {
-  @IsUUID('4')
+  @IsUUID('4', { message: ErrorMessages.IS_UUID })
   companyId: string;
 
   @IsEmail()
@@ -81,14 +83,24 @@ export class LoginDto {
   password: string;
 }
 
-export class NewPasswordDto extends LoginDto {
-  @Exclude()
+export class NewPasswordDto {
+  @IsString()
+  @IsNotEmpty()
+  password: string;
+
+  @IsNotEmpty()
+  @IsEmail()
   email: string;
+
+  @IsString()
+  @IsNotEmpty()
+  token: string;
 }
 
-export class PasswordRecoverDto extends LoginDto {
-  @Exclude()
-  password: string;
+export class PasswordRecoverDto {
+  @IsNotEmpty()
+  @IsEmail()
+  email: string;
 }
 
 export class ValidateUserDto {

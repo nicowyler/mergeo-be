@@ -1,4 +1,4 @@
 export enum ACCOUNT_TYPE {
-  USER = 'USER',
+  CLIENT = 'CLIENT',
   PROVIDER = 'PROVIDER',
 }

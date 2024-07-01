@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -16,6 +17,9 @@ import {
   UserDto,
 } from '../../modules/auth/dto';
 import { CompanyService } from '../../modules/company/company.service';
+import { HttpService } from '@nestjs/axios';
+import { firstValueFrom } from 'rxjs';
+import { config } from 'dotenv';
 
 @Injectable()
 export class AuthService {
@@ -25,6 +29,7 @@ export class AuthService {
     private jwtTokenService: JwtService,
     private encodderService: EncoderService,
     private _config: ConfigService,
+    private readonly httpService: HttpService,
   ) {}
 
   async registerUser(regiserDto: RegisterUserDto): Promise<any> {
@@ -36,15 +41,13 @@ export class AuthService {
   }
 
   async registerCompany(regiserDto: RegisterCompanyDto): Promise<any> {
-    await this.companyService.createCompany(regiserDto);
+    return await this.companyService.createCompany(regiserDto);
   }
 
   async addUser(id: string, userDto: AddUserDto): Promise<any> {
     const company = await this.companyService.getCompanyById(userDto.companyId);
 
-    await this.userService.addNewUser(id, userDto, company);
-
-    return;
+    return await this.userService.addNewUser(id, userDto, company);
   }
 
   async validateUserEmail(email: string, activationCode: string): Promise<any> {
@@ -76,6 +79,61 @@ export class AuthService {
     }
   }
 
+  async newPasswordTokenVerification(
+    token: string,
+  ): Promise<{ password: string; id: string }> {
+    const { email, password } = await this.jwtTokenService.verifyAsync(token, {
+      secret: this._config.get('SECRET_PASSWORD_RESET'),
+    });
+
+    try {
+      const user = await this.userService.getUserByEmail(email);
+      if (user) {
+        if (user.email_verified) {
+          // check token data against db data
+          if (email == user.email && password == user.password) {
+            return { password: password, id: user.id };
+          } else {
+            throw new BadRequestException(
+              ErrorMessages.USER_PASSWORD_RESET_LINK_NOT_VALID,
+            );
+          }
+        } else {
+          throw new BadRequestException(ErrorMessages.USER_EMAIL_NOT_VERIFIED);
+        }
+      } else {
+        throw new NotFoundException(ErrorMessages.USER_NOT_FOUND);
+      }
+    } catch (error) {
+      if (error?.name === 'TokenExpiredError') {
+        // If the code has expired we save the new one in the DB and re-send the email
+        const newActivationCode = this.encodderService.generateActivationCode();
+        this.userService.resendPasswordRecover(email, newActivationCode);
+        throw new BadRequestException(
+          ErrorMessages.USER_PASSWORD_RESET_LINK_EXPIRED,
+        );
+      }
+    }
+  }
+
+  async resetPasswordTokenGeneration(email: string): Promise<string> {
+    const user = await this.userService.getUserByEmail(email);
+    // if user is already verified we return the token
+    if (user.email_verified) {
+      const token = this.jwtTokenService.sign(
+        { email: user.email, password: user.password },
+        {
+          secret: this._config.get('SECRET_VERIFICATION_CODE'),
+          expiresIn: '1m',
+        },
+      );
+
+      return token;
+    } else {
+      throw new BadRequestException(ErrorMessages.USER_EMAIL_NOT_VERIFIED);
+    }
+  }
+
   async isValidEmail(email: string): Promise<User> {
     const user = await this.userService.getUserByEmail(email);
     return user;
@@ -98,6 +156,16 @@ export class AuthService {
       return result;
     } else {
       throw new UnauthorizedException(ErrorMessages.USER_NOT_AUTH);
+    }
+  }
+
+  async helpers(type: string, params: string) {
+    const url = `https://apis.datos.gob.ar/georef/api/${type}?${params}`;
+    try {
+      const { data } = await firstValueFrom(this.httpService.get(url));
+      return data;
+    } catch (err) {
+      throw new Error(err);
     }
   }
 

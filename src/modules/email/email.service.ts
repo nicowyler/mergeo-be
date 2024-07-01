@@ -3,6 +3,9 @@ import { MailerService } from '@nestjs-modules/mailer';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { OnEvent } from '@nestjs/event-emitter';
+import { AES } from 'crypto-js';
+import { Emails } from 'src/common/enum';
+
 @Injectable()
 export class EmailService {
   constructor(
@@ -26,8 +29,8 @@ export class EmailService {
     });
   }
 
-  @OnEvent('user.reset-password')
-  async forgotPasswordEmail(data: EventPayloads['user.reset-password']) {
+  @OnEvent(Emails.ResetPassword)
+  async forgotPasswordEmail(data: EventPayloads[Emails.ResetPassword]) {
     const { email, link } = data;
 
     const subject = `Reset Password`;
@@ -39,9 +42,7 @@ export class EmailService {
       template: './templates/main',
       context: {
         template: './partials/forgot-password',
-        link: `${this.config.get(
-          'USER_HOST',
-        )}/reset-password?token=29912839128129128`,
+        link: link,
       },
     });
   }
@@ -73,6 +74,13 @@ export class EmailService {
     const { email, name, activationCode } = data;
 
     const subject = `Verify Email`;
+    const params = JSON.stringify({ email, activationCode });
+    const secret = this.config.get('ACTIVATION_CODE_KEY');
+
+    const encryptedData = AES.encrypt(
+      JSON.stringify(params),
+      secret,
+    ).toString();
 
     await this.mailerService.sendMail({
       to: email,
@@ -85,7 +93,7 @@ export class EmailService {
         name,
         link: `${this.config.get(
           'USER_HOST',
-        )}/verify-code?code=${activationCode}`,
+        )}/registration/validate?data=${encryptedData}`,
       },
     });
   }

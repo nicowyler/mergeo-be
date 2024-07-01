@@ -34,6 +34,7 @@ export class CompanyService {
     try {
       const company = this.companyRepository.create({
         ...body,
+        ...{ cuit: parseInt(body.cuit) },
       });
       const result = await this.companyRepository.save(company);
       return result;

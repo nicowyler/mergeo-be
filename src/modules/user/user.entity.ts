@@ -42,7 +42,7 @@ export class User extends DateAudit {
     type: 'enum',
     enum: ACCOUNT_TYPE,
     nullable: false,
-    default: [ACCOUNT_TYPE.USER],
+    default: [ACCOUNT_TYPE.CLIENT],
   })
   accountType: string;
 
