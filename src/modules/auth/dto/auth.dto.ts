@@ -88,10 +88,6 @@ export class NewPasswordDto {
   @IsNotEmpty()
   password: string;
 
-  @IsNotEmpty()
-  @IsEmail()
-  email: string;
-
   @IsString()
   @IsNotEmpty()
   token: string;

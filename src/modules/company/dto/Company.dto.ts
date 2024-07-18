@@ -1,11 +1,11 @@
 import {
-  IsMobilePhone,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
   IsUUID,
 } from 'class-validator';
+import { Address } from 'src/modules/company/address.entity';
 
 export class CreateCompanyDto {
   @IsString()
@@ -21,19 +21,15 @@ export class CreateCompanyDto {
   cuit: string;
 
   @IsNotEmpty()
-  @IsString()
-  country: string;
-
-  @IsNotEmpty()
-  @IsString()
-  province: string;
-
-  @IsNotEmpty()
-  @IsString()
-  locality: string;
-
-  @IsNotEmpty()
-  address: string;
+  address: {
+    displayName: {
+      text: string;
+    };
+    location: {
+      longitude: number;
+      latitude: number;
+    };
+  };
 
   @IsNotEmpty()
   @IsString()
@@ -59,20 +55,7 @@ export class UpdateCompanyDto {
   cuit?: number;
 
   @IsOptional()
-  @IsString()
-  country?: string;
-
-  @IsOptional()
-  @IsString()
-  province?: string;
-
-  @IsOptional()
-  @IsString()
-  locality?: string;
-
-  @IsOptional()
-  @IsMobilePhone('es-AR')
-  phoneNumber?: string;
+  address?: Address;
 
   @IsOptional()
   @IsString()

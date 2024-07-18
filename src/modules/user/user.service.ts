@@ -163,7 +163,7 @@ export class UserService {
       });
     } catch (error) {
       if (error.code === '23502') {
-        throw new NotFoundException(`${ErrorMessages.USER_NOT_FOUND} ${id}`);
+        throw new NotFoundException(`${ErrorMessages.USER_NOT_FOUND} ${email}`);
       } else {
         throw new InternalServerErrorException();
       }

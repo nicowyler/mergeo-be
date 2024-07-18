@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Company } from '../../modules/company/company.entity';
+import { Address, Company } from '../../modules/company/company.entity';
 import {
   BranchesResponseDto,
   CreateBranchDto,
@@ -31,12 +31,26 @@ export class CompanyService {
   ) {}
 
   async createCompany(body: CreateCompanyDto) {
+    console.log(body);
+    const newAddress = new Address();
+    newAddress.name = body.address.displayName.text;
+    newAddress.polygon = {
+      type: 'Point',
+      coordinates: [
+        body.address.location.longitude,
+        body.address.location.latitude,
+      ],
+    };
+
+    const newCompany = new Company();
+    newCompany.name = body.name;
+    newCompany.razonSocial = body.razonSocial;
+    newCompany.cuit = parseInt(body.cuit);
+    newCompany.address = newAddress;
+    newCompany.activity = body.activity;
+
     try {
-      const company = this.companyRepository.create({
-        ...body,
-        ...{ cuit: parseInt(body.cuit) },
-      });
-      const result = await this.companyRepository.save(company);
+      const result = await this.companyRepository.save(newCompany);
       return result;
     } catch (error) {
       console.log(error);

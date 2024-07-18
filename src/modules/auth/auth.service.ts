@@ -19,7 +19,6 @@ import {
 import { CompanyService } from '../../modules/company/company.service';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
-import { config } from 'dotenv';
 
 @Injectable()
 export class AuthService {
@@ -123,8 +122,8 @@ export class AuthService {
       const token = this.jwtTokenService.sign(
         { email: user.email, password: user.password },
         {
-          secret: this._config.get('SECRET_VERIFICATION_CODE'),
-          expiresIn: '1m',
+          privateKey: this._config.get('SECRET_PASSWORD_RESET'),
+          expiresIn: this._config.get('SECRET_PASSWORD_RESET_EXPIRATION'),
         },
       );
 
@@ -158,7 +157,6 @@ export class AuthService {
       throw new UnauthorizedException(ErrorMessages.USER_NOT_AUTH);
     }
   }
-
   async helpers(type: string, params: string) {
     const url = `https://apis.datos.gob.ar/georef/api/${type}?${params}`;
     try {

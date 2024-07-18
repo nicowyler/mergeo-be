@@ -6,8 +6,10 @@ import {
   PrimaryGeneratedColumn,
   OneToMany,
   Unique,
+  OneToOne,
 } from 'typeorm';
 import { User } from '../../modules/user/user.entity';
+import { Address } from 'src/modules/company/address.entity';
 
 @Entity()
 @Unique('UQ_BUSINESS_NAME', ['razonSocial'])
@@ -25,17 +27,8 @@ export class Company extends DateAudit {
   @Column()
   cuit: number;
 
-  @Column()
-  country: string;
-
-  @Column()
-  province: string;
-
-  @Column()
-  locality: string;
-
-  @Column()
-  address: string;
+  @OneToOne(() => Address, (address) => address.company, { cascade: true })
+  address: Address;
 
   @Column()
   activity: string;
@@ -46,3 +39,4 @@ export class Company extends DateAudit {
   @OneToMany(() => Branch, (branch) => branch.company)
   branches: Branch[];
 }
+export { Address };

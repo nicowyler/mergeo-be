@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { CompanyService } from './company.service';
-import { Company } from './company.entity';
+import { Address, Company } from './company.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EncoderService } from '../auth/encoder.service';
 import { TypedEventEmitterModule } from '../../modules/event-emitter/typed-event-emitter.module';
@@ -17,7 +17,14 @@ import { RoleService } from 'src/modules/role/role.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Role, Company, Branch, Permission]),
+    TypeOrmModule.forFeature([
+      User,
+      Role,
+      Company,
+      Branch,
+      Permission,
+      Address,
+    ]),
     TypedEventEmitterModule,
     PassportModule,
   ],
