@@ -170,8 +170,12 @@ export class UserService {
     }
   }
 
-  async getUsers(): Promise<User[]> {
-    return this.userRepository.find();
+  async getUsers(companyId: string): Promise<User[]> {
+    const users = await this.userRepository.find({
+      where: { company: { id: companyId } },
+      relations: ['role', 'company'],
+    });
+    return users;
   }
 
   async getUser(id: string): Promise<User> {
@@ -187,8 +191,9 @@ export class UserService {
   }
 
   async getUserByEmail(email: string): Promise<User> {
-    const user: User = await this.userRepository.findOneBy({
-      email: email,
+    const user = await this.userRepository.findOne({
+      where: { email: email },
+      relations: ['company', 'company.address'],
     });
 
     if (!user)

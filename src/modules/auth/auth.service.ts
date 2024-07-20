@@ -157,6 +157,7 @@ export class AuthService {
       throw new UnauthorizedException(ErrorMessages.USER_NOT_AUTH);
     }
   }
+
   async helpers(type: string, params: string) {
     const url = `https://apis.datos.gob.ar/georef/api/${type}?${params}`;
     try {

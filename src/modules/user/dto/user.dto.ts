@@ -3,6 +3,7 @@ import { Exclude } from 'class-transformer';
 
 import {
   IsArray,
+  IsBoolean,
   IsEmail,
   IsEnum,
   IsMobilePhone,
@@ -11,12 +12,15 @@ import {
   IsString,
   IsUUID,
 } from 'class-validator';
+import { BaseDateResponseDTO } from 'src/common/dto/baseDate.dto';
+import { Role } from 'src/modules/role/role.entity';
 
 export class UUIDDto {
   @IsUUID('4')
   id: string;
 }
-export class CreateUserDto {
+
+export class CreateUserDto extends BaseDateResponseDTO {
   @IsEmail()
   email: string;
 
@@ -41,6 +45,11 @@ export class CreateUserDto {
   accountType: string;
 }
 
+export class GetUsersDto {
+  @IsUUID('4')
+  id: string;
+}
+
 export class UserResponseDto extends CreateUserDto {
   @IsUUID('4')
   id: string;
@@ -49,13 +58,16 @@ export class UserResponseDto extends CreateUserDto {
   password: string;
 
   @Exclude()
-  email_verified: string;
-
-  @Exclude()
   activationCode: string;
 
+  @IsString()
+  name: string;
+
+  @IsBoolean()
+  isActive: boolean;
+
   @IsArray()
-  roles: string[];
+  roles: Role[];
 }
 
 export class UpdateUserDto {

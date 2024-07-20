@@ -9,7 +9,6 @@ import {
   Length,
 } from 'class-validator';
 import { CreateCompanyDto } from 'src/modules/company/dto';
-import { Exclude } from 'class-transformer';
 
 export class UserDto {
   @IsNotEmpty()
@@ -46,7 +45,7 @@ class TokensDto {
 
 export class AuthDto {
   user: UserDto;
-
+  company: CreateCompanyDto;
   tokens: TokensDto;
 }
 

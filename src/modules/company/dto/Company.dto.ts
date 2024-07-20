@@ -22,12 +22,9 @@ export class CreateCompanyDto {
 
   @IsNotEmpty()
   address: {
-    displayName: {
-      text: string;
-    };
-    location: {
-      longitude: number;
-      latitude: number;
+    name: string;
+    polygon: {
+      coordinates: number[];
     };
   };
 

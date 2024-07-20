@@ -32,24 +32,21 @@ export class CompanyService {
 
   async createCompany(body: CreateCompanyDto) {
     console.log(body);
-    const newAddress = new Address();
-    newAddress.name = body.address.displayName.text;
-    newAddress.polygon = {
-      type: 'Point',
-      coordinates: [
-        body.address.location.longitude,
-        body.address.location.latitude,
-      ],
-    };
-
-    const newCompany = new Company();
-    newCompany.name = body.name;
-    newCompany.razonSocial = body.razonSocial;
-    newCompany.cuit = parseInt(body.cuit);
-    newCompany.address = newAddress;
-    newCompany.activity = body.activity;
-
     try {
+      const newAddress = new Address();
+      newAddress.name = body.address.name;
+      newAddress.polygon = {
+        type: 'Point',
+        coordinates: body.address.polygon.coordinates.reverse(),
+      };
+
+      const newCompany = new Company();
+      newCompany.name = body.name;
+      newCompany.razonSocial = body.razonSocial;
+      newCompany.cuit = parseInt(body.cuit);
+      newCompany.address = newAddress;
+      newCompany.activity = body.activity;
+
       const result = await this.companyRepository.save(newCompany);
       return result;
     } catch (error) {

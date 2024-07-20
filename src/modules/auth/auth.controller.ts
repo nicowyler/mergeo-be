@@ -6,7 +6,6 @@ import {
   ParseUUIDPipe,
   Post,
   Query,
-  Req,
   Request,
   Res,
   UnauthorizedException,
@@ -15,7 +14,7 @@ import {
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { ResponseMessage } from '../../decorators/response_message.decorator';
-import { Response, response } from 'express';
+import { Response } from 'express';
 import {
   LoginDto,
   NewPasswordDto,
@@ -27,8 +26,6 @@ import {
 import { TypedEventEmitter } from '../../modules/event-emitter/typed-event-emitter.class';
 import { ConfigService } from '@nestjs/config';
 import { TransformInterceptor } from '../../interceptors/response.interceptor';
-import { AuthGuard } from '../../guards';
-import { AuthenticatedRequest } from '../../common/interface/AuthenticatedRequest.inteeface';
 import { UserService } from '../../modules/user/user.service';
 import {
   AddUserDto,
@@ -120,6 +117,7 @@ export class AuthController {
       accountType: accountType,
       name: `${firstName} ${lastName}`,
     };
+    authDto.company = validUser.company;
 
     return authDto;
   }

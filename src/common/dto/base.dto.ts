@@ -1,14 +1,14 @@
-import { IsNumber } from "class-validator";
+import { IsNumber } from 'class-validator';
 
 export class BaseResponseDTO<T> {
-    @IsNumber()
-    count: number;
+  @IsNumber()
+  count: number;
 
-    @IsNumber()
-    page: number;
+  @IsNumber()
+  page: number;
 
-    @IsNumber()
-    limit: number;
+  @IsNumber()
+  limit: number;
 
-    data: T[]
-  }
+  data: T[];
+}

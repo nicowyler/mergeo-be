@@ -7,6 +7,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   SetMetadata,
   UseGuards,
   UseInterceptors,
@@ -20,6 +21,7 @@ import { AuthGuard, PermissionsGuard } from '../../guards';
 import { PERMISSIONS } from '../../common/enum/permissions.enum';
 import { CreateRoleDto } from 'src/modules/role/dto';
 import { AddRolesToUserDto } from 'src/modules/role/dto/role.dto';
+import { GetUsersDto } from 'src/modules/user/dto/user.dto';
 
 @UseInterceptors(TransformInterceptor)
 @Controller('user')
@@ -29,14 +31,19 @@ export class UserController {
   @Get()
   @UseGuards(AuthGuard)
   @ResponseMessage('Usuarios encontrados con exito!')
-  async users(): Promise<UserResponseDto[]> {
-    const users = await this.userService.getUsers();
+  async users(@Query() param: GetUsersDto): Promise<UserResponseDto[]> {
+    const users = await this.userService.getUsers(param.id);
 
     const usersList = [];
     users.forEach((item) => {
       const userResponseDto = new UserResponseDto();
       userResponseDto.id = item.id;
+      userResponseDto.name = item.firstName + ' ' + item.lastName;
       userResponseDto.email = item.email;
+      userResponseDto.isActive = item.email_verified;
+      userResponseDto.roles = [...item.role];
+      userResponseDto.created = item.created;
+      userResponseDto.updated = item.updated;
       usersList.push(userResponseDto);
     });
 
