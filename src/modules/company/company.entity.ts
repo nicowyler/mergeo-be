@@ -1,5 +1,3 @@
-import { DateAudit } from '../../common/entities/base.entity';
-import { Branch } from '../../modules/company/branch.entity';
 import {
   Entity,
   Column,
@@ -7,7 +5,10 @@ import {
   OneToMany,
   Unique,
   OneToOne,
+  JoinColumn,
 } from 'typeorm';
+import { DateAudit } from '../../common/entities/base.entity';
+import { Branch } from '../../modules/company/branch.entity';
 import { User } from '../../modules/user/user.entity';
 import { Address } from 'src/modules/company/address.entity';
 
@@ -28,6 +29,7 @@ export class Company extends DateAudit {
   cuit: number;
 
   @OneToOne(() => Address, (address) => address.company, { cascade: true })
+  @JoinColumn()
   address: Address;
 
   @Column()

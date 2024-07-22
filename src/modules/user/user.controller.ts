@@ -22,7 +22,9 @@ import { PERMISSIONS } from '../../common/enum/permissions.enum';
 import { CreateRoleDto } from 'src/modules/role/dto';
 import { AddRolesToUserDto } from 'src/modules/role/dto/role.dto';
 import { GetUsersDto } from 'src/modules/user/dto/user.dto';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Usuario')
 @UseInterceptors(TransformInterceptor)
 @Controller('user')
 export class UserController {

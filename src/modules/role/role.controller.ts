@@ -13,7 +13,9 @@ import { ResponseMessage } from '../../decorators/response_message.decorator';
 import { AuthGuard } from '../../guards';
 import { Permission } from '../../modules/role/permission.entity';
 import { GetRoleDto } from 'src/modules/role/dto/role.dto';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Roles')
 @UseInterceptors(TransformInterceptor)
 @Controller('role')
 export class RoleController {

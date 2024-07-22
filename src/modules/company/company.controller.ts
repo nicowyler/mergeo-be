@@ -5,7 +5,6 @@ import {
   Param,
   Patch,
   Post,
-  Query,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
@@ -24,7 +23,9 @@ import { Company } from '../../modules/company/company.entity';
 import { CompanyService } from '../../modules/company/company.service';
 import { Branch } from '../../modules/company/branch.entity';
 import { UUID } from 'crypto';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Companias')
 @UseInterceptors(TransformInterceptor)
 @Controller('company')
 export class CompanyController {

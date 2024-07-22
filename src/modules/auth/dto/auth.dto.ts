@@ -9,19 +9,24 @@ import {
   Length,
 } from 'class-validator';
 import { CreateCompanyDto } from 'src/modules/company/dto';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class UserDto {
+  @ApiProperty()
   @IsNotEmpty()
   @IsUUID('4')
   id: string;
 
+  @ApiProperty()
   @IsNotEmpty()
   @IsEmail()
   email: string;
 
+  @ApiProperty()
   @IsNotEmpty()
   name: string;
 
+  @ApiProperty()
   @IsNotEmpty()
   @IsEnum(ACCOUNT_TYPE, {
     message: `${ErrorMessages.ACCOUNT_TYPE} ${ACCOUNT_TYPE.CLIENT} o ${ACCOUNT_TYPE.PROVIDER}`,
@@ -30,14 +35,17 @@ export class UserDto {
 }
 
 class TokensDto {
+  @ApiProperty()
   @IsString()
   @IsNotEmpty()
   access_token: string;
 
+  @ApiProperty()
   @IsString()
   @IsNotEmpty()
   refresh_token: string;
 
+  @ApiProperty()
   @IsString()
   @IsNotEmpty()
   expiresIn: number;

@@ -7,12 +7,15 @@ import {
   IsString,
   IsUUID,
 } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateRoleDto {
+  @ApiProperty()
   @IsNotEmpty()
   @IsString()
   name: string;
 
+  @ApiProperty()
   @IsArray()
   permissions: Permission[];
 }
@@ -20,24 +23,29 @@ export class CreateRoleDto {
 export class ResponseCreateRoleDto extends CreateRoleDto {}
 
 export class GetRoleDto {
+  @ApiProperty()
   @IsNotEmpty()
   @IsUUID()
   companyId: string;
 
+  @ApiProperty()
   @IsArray()
   roles: Pick<Role, 'name' | 'id' | 'permissions'>[];
 }
 
 export class UpdateRoleDto extends CreateRoleDto {
+  @ApiProperty()
   @IsOptional()
   name: string;
 
+  @ApiProperty()
   @IsOptional()
   @IsArray()
   permissions: Permission[];
 }
 
 export class AddRolesToUserDto {
+  @ApiProperty()
   @IsArray()
   roles: Pick<Role, 'id'>[];
 }

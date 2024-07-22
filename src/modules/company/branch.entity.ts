@@ -25,15 +25,6 @@ export class Branch {
   @Column()
   address: string;
 
-  @Column()
-  province: string;
-
-  @Column()
-  locality: string;
-
-  @Column()
-  zipCode: number;
-
   @ManyToOne(() => Company, (company) => company.branches)
   company: Company;
 }

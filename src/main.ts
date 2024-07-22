@@ -4,6 +4,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { CORS } from './common/constants';
 import { ConfigService } from '@nestjs/config';
 import * as cookieParser from 'cookie-parser';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -25,6 +26,15 @@ async function bootstrap() {
   app.use(cookieParser());
 
   app.setGlobalPrefix('api');
+
+  const config = new DocumentBuilder()
+    .setTitle('Mergeo API')
+    .setDescription('Mergeo API documentation')
+    .setVersion('1.0')
+    .addTag('Mergeo')
+    .build();
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('docs', app, document);
 
   await app.listen(AppModule.port);
 }

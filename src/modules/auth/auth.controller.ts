@@ -6,6 +6,7 @@ import {
   ParseUUIDPipe,
   Post,
   Query,
+  Req,
   Request,
   Res,
   UnauthorizedException,
@@ -35,6 +36,11 @@ import {
 } from './dto/auth.dto';
 import { RefreshGuard } from '../../guards/refresh.guard';
 import { Emails } from 'src/common/enum';
+import { AuthGuard } from 'src/guards/auth.guard';
+import { AuthenticatedRequest } from 'src/common/interface/AuthenticatedRequest.inteeface';
+import { ApiTags } from '@nestjs/swagger';
+
+@ApiTags('Autentificación')
 @UseInterceptors(TransformInterceptor)
 @Controller('auth')
 export class AuthController {
@@ -120,6 +126,18 @@ export class AuthController {
     authDto.company = validUser.company;
 
     return authDto;
+  }
+
+  @Post('/logout')
+  @UseGuards(AuthGuard)
+  @ResponseMessage('te has deslogueado exitosamente! chau chau')
+  async logout(
+    @Req() request: AuthenticatedRequest,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    response.clearCookie('tokens');
+
+    return {};
   }
 
   @Post('/password-recover')
