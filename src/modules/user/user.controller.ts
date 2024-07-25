@@ -23,27 +23,48 @@ import { CreateRoleDto } from 'src/modules/role/dto';
 import { AddRolesToUserDto } from 'src/modules/role/dto/role.dto';
 import { GetUsersDto } from 'src/modules/user/dto/user.dto';
 import { ApiTags } from '@nestjs/swagger';
+import { RoleService } from 'src/modules/role/role.service';
 
 @ApiTags('Usuario')
 @UseInterceptors(TransformInterceptor)
 @Controller('user')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly roleService: RoleService,
+  ) {}
 
   @Get()
   @UseGuards(AuthGuard)
   @ResponseMessage('Usuarios encontrados con exito!')
   async users(@Query() param: GetUsersDto): Promise<UserResponseDto[]> {
+    // ID = company ID
     const users = await this.userService.getUsers(param.id);
+    const allPermissions = await this.roleService.getPermissions();
 
     const usersList = [];
     users.forEach((item) => {
+      const updatedRoles = item.role.map((role) => {
+        const updatedPermissions = allPermissions.map((perm) => ({
+          id: perm.id,
+          name: perm.name,
+          group: perm.group,
+          action: perm.action,
+          hasPermission: role.permissions.some((r) => r.name === perm.name),
+        }));
+
+        return {
+          ...role,
+          permissions: updatedPermissions,
+        };
+      });
+
       const userResponseDto = new UserResponseDto();
       userResponseDto.id = item.id;
       userResponseDto.name = item.firstName + ' ' + item.lastName;
       userResponseDto.email = item.email;
       userResponseDto.isActive = item.email_verified;
-      userResponseDto.roles = [...item.role];
+      userResponseDto.roles = updatedRoles;
       userResponseDto.created = item.created;
       userResponseDto.updated = item.updated;
       usersList.push(userResponseDto);

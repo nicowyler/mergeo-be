@@ -19,6 +19,8 @@ import {
 import { CompanyService } from '../../modules/company/company.service';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
+import { response } from 'express';
+import { RoleService } from 'src/modules/role/role.service';
 
 @Injectable()
 export class AuthService {
@@ -27,6 +29,7 @@ export class AuthService {
     private companyService: CompanyService,
     private jwtTokenService: JwtService,
     private encodderService: EncoderService,
+    private roleService: RoleService,
     private _config: ConfigService,
     private readonly httpService: HttpService,
   ) {}
@@ -36,7 +39,13 @@ export class AuthService {
     const company = await this.companyService.getCompanyById(
       regiserDto.companyId,
     );
-    await this.userService.createUser(regiserDto, company, activationCode);
+    const user: User = await this.userService.createUser(
+      regiserDto,
+      company,
+      activationCode,
+    );
+
+    await this.roleService.createAdminRole(company.id, user);
   }
 
   async registerCompany(regiserDto: RegisterCompanyDto): Promise<any> {

@@ -5,9 +5,11 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 export class PopulatePermissions1715875820382 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Create permissions based on values in the PERMISSIONS enum
-    const permissions = Object.values(PERMISSIONS).map((permissionName) => {
+    const permissions = Object.values(PERMISSIONS).map((p) => {
       const permission = new Permission();
-      permission.name = permissionName;
+      permission.name = p.name;
+      permission.group = p.group;
+      permission.action = p.action;
       return permission;
     });
 

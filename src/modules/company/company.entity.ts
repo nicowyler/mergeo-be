@@ -5,12 +5,11 @@ import {
   OneToMany,
   Unique,
   OneToOne,
-  JoinColumn,
 } from 'typeorm';
 import { DateAudit } from '../../common/entities/base.entity';
 import { Branch } from '../../modules/company/branch.entity';
 import { User } from '../../modules/user/user.entity';
-import { Address } from 'src/modules/company/address.entity';
+import { Address } from '../../modules/company/address.entity';
 
 @Entity()
 @Unique('UQ_BUSINESS_NAME', ['razonSocial'])
@@ -29,7 +28,6 @@ export class Company extends DateAudit {
   cuit: number;
 
   @OneToOne(() => Address, (address) => address.company, { cascade: true })
-  @JoinColumn()
   address: Address;
 
   @Column()
@@ -41,4 +39,5 @@ export class Company extends DateAudit {
   @OneToMany(() => Branch, (branch) => branch.company)
   branches: Branch[];
 }
+
 export { Address };

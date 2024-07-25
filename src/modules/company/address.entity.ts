@@ -1,4 +1,4 @@
-import { Company } from 'src/modules/company/company.entity';
+import { Company } from '../../modules/company/company.entity';
 import {
   Column,
   Entity,
@@ -10,8 +10,8 @@ import {
 
 @Entity()
 export class Address {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @Column()
   name: string;

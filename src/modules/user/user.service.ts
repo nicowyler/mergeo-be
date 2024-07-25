@@ -73,6 +73,7 @@ export class UserService {
         activationCode: activationCode,
       });
       await this.userRepository.save(user);
+      return user;
     } catch (error) {
       if (error.code === '23505')
         throw new ConflictException(ErrorMessages.USER_EMAIL_EXISTS);
@@ -173,8 +174,9 @@ export class UserService {
   async getUsers(companyId: string): Promise<User[]> {
     const users = await this.userRepository.find({
       where: { company: { id: companyId } },
-      relations: ['role', 'company'],
+      relations: ['role', 'company', 'role.permissions'],
     });
+
     return users;
   }
 

@@ -46,6 +46,14 @@ export class RoleService {
     }
   }
 
+  async createAdminRole(companyId: string, user: User) {
+    const permissions = await this.permissionRepository.find();
+    this.createRole(companyId, user, {
+      name: 'Admin',
+      permissions: permissions,
+    });
+  }
+
   async getRoles(companyId: string): Promise<GetRoleDto> {
     const roles = await this.roleRepository.find({
       where: { companyId: companyId },

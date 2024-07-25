@@ -129,7 +129,6 @@ export class AuthController {
   }
 
   @Post('/logout')
-  @UseGuards(AuthGuard)
   @ResponseMessage('te has deslogueado exitosamente! chau chau')
   async logout(
     @Req() request: AuthenticatedRequest,
