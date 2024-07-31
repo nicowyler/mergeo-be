@@ -19,6 +19,7 @@ export enum ErrorMessages {
   // COMPANY
   ROLE_NAME_TAKEN = 'El rol ya existe',
   ROLE_NOT_FOUND = 'No se encontro ningun rol con el id',
+  ROLE_HAS_USER = 'Hay un usuario asociado a este rol',
 
   // ACTIVATION CODE
   ACTIVATION_CODE_LENGTH = 'El codigo de activacion tine que ser de 6 caracteres',

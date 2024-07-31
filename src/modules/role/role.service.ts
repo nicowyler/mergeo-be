@@ -48,9 +48,16 @@ export class RoleService {
 
   async createAdminRole(companyId: string, user: User) {
     const permissions = await this.permissionRepository.find();
-    this.createRole(companyId, user, {
+    return this.createRole(companyId, user, {
       name: 'Admin',
       permissions: permissions,
+    });
+  }
+
+  async createCompanyRole(companyId: string, createRoleDto: CreateRoleDto) {
+    return this.createRole(companyId, null, {
+      name: createRoleDto.name,
+      permissions: createRoleDto.permissions,
     });
   }
 
@@ -59,16 +66,26 @@ export class RoleService {
       where: { companyId: companyId },
       relations: ['user', 'permissions'],
     });
+    const allPermissions = await this.getPermissions();
 
-    const returnRoles = roles.map((role) => {
+    const updatedRoles = roles.map((role) => {
+      const updatedPermissions = allPermissions.map((perm) => ({
+        id: perm.id,
+        name: perm.name,
+        group: perm.group,
+        action: perm.action,
+        hasPermission: role.permissions.some((r) => r.name === perm.name),
+      }));
+
+      const { companyId, user, ...roleWithoutCompanyIdAndUser } = role;
+
       return {
-        id: role.id,
-        name: role.name,
-        permissions: role.permissions,
+        ...roleWithoutCompanyIdAndUser,
+        permissions: updatedPermissions,
       };
     });
 
-    return { companyId: companyId, roles: returnRoles };
+    return { companyId: companyId, roles: updatedRoles };
   }
 
   async getRolesById(roleIds: Pick<Role, 'id'>[]): Promise<Role[]> {
@@ -79,6 +96,8 @@ export class RoleService {
   }
 
   async updateRole(id: string, body: UpdateRoleDto): Promise<Role> {
+    console.log(body);
+
     const role = await this.roleRepository.save({
       id: id,
       ...body,
@@ -87,6 +106,14 @@ export class RoleService {
   }
 
   async deleteRole(id: string): Promise<void> {
+    const roles = await this.roleRepository.find({
+      relations: ['user'],
+    });
+
+    if (roles.length && roles[0].user) {
+      throw new ConflictException(ErrorMessages.ROLE_HAS_USER);
+    }
+
     const deleteResult = await this.roleRepository.delete({
       id: id,
     });

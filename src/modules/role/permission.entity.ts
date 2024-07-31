@@ -14,4 +14,7 @@ export class Permission {
 
   @Column()
   action: string;
+
+  @Column('boolean', { default: false })
+  hasPermission: boolean;
 }

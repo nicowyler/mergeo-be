@@ -1,3 +1,4 @@
+import { DateAudit } from 'src/common/entities/base.entity';
 import { User } from '../../modules/user/user.entity';
 import { Permission } from './permission.entity';
 import {
@@ -8,11 +9,13 @@ import {
   JoinTable,
   ManyToOne,
   Unique,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 
 @Entity()
 @Unique('UQ_ROLE_NAME', ['name'])
-export class Role {
+export class Role extends DateAudit {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -29,4 +32,10 @@ export class Role {
   @ManyToOne(() => User, (user) => user.role)
   @JoinTable()
   user: User;
+
+  @CreateDateColumn()
+  created?: Date;
+
+  @UpdateDateColumn()
+  updated?: Date;
 }
