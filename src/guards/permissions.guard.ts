@@ -7,6 +7,7 @@ import {
   CanActivate,
   ExecutionContext,
   UnauthorizedException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 
@@ -32,17 +33,17 @@ export class PermissionsGuard implements CanActivate {
     }
 
     // Fetch Role entities associated with the user
-    const userRoles = await this.userService.getUser(user.sub);
+    const storedUser = await this.userService.getUser(user.id);
 
     // Check if user's roles have the required permissions
-    const isAuthorized = userRoles.role.some((role: Role) =>
+    const hasPermission = storedUser.role.some((role: Role) =>
       role.permissions.some((permission: Permission) =>
         requiredPermissions.includes(permission.name),
       ),
     );
 
-    if (!isAuthorized) {
-      throw new UnauthorizedException(
+    if (!hasPermission) {
+      throw new ForbiddenException(
         'No tiene permisos para realizar esta accion',
       );
     } else {

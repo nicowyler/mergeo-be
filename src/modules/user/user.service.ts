@@ -95,20 +95,21 @@ export class UserService {
       throw new NotFoundException(`${ErrorMessages.USER_NOT_FOUND} ${id}`);
     }
 
-    const user = this.userRepository.create({
-      ...userDto,
-      company,
-      password: hashedPassword,
-    });
-
     try {
+      const user = this.userRepository.create({
+        ...userDto,
+        company,
+        password: hashedPassword,
+      });
+
+      await this.userRepository.save(user);
+
       this.eventEmitter.emit('user.invited', {
         email: userDto.email,
         owner: `${owner.firstName} ${owner.lastName}`,
         company: company.name,
         password: password,
       });
-      await this.userRepository.save(user);
     } catch (error) {
       if (error.code === '23505')
         throw new ConflictException(ErrorMessages.USER_EMAIL_EXISTS);
@@ -183,7 +184,7 @@ export class UserService {
   async getUser(id: string): Promise<User> {
     const user = await this.userRepository.findOne({
       where: { id: id },
-      relations: ['role'],
+      relations: ['role', 'role.permissions'],
     });
 
     if (!user)
@@ -204,11 +205,31 @@ export class UserService {
     return user;
   }
 
-  async editUser(id: string, body: UpdateUserDto): Promise<UpdateUserDto> {
+  async editUser(id: string, body: UpdateUserDto): Promise<User> {
     try {
-      const user = await this.userRepository.save({ id, ...body });
-      let updatedUser = new UpdateUserDto();
-      updatedUser = user;
+      // Fetch user along with current roles
+      const user = await this.userRepository.findOne({
+        where: { id },
+        relations: ['role'],
+      });
+      if (!user) {
+        throw new NotFoundException(`${ErrorMessages.USER_NOT_FOUND} ${id}`);
+      }
+
+      // Update user details
+      Object.assign(user, body);
+
+      if (body.roles) {
+        // Fetch roles to be assigned
+        const roles = await this.roleService.getRolesById(body.roles);
+
+        // Update user roles
+        user.role = roles;
+      }
+
+      // Save updated user
+      const updatedUser = await this.userRepository.save(user);
+
       return updatedUser;
     } catch (error) {
       if (error.code === '23502') {
@@ -263,10 +284,15 @@ export class UserService {
   }
 
   async removeUser(id: string): Promise<User> {
-    const user: User = await this.userRepository.findOneBy({ id: id });
+    const user = await this.userRepository.findOne({
+      where: { id },
+      relations: ['role'],
+    });
 
     if (!user)
       throw new NotFoundException(`${ErrorMessages.USER_NOT_FOUND} ${id}`);
+
+    user.role = [];
 
     this.userRepository.remove(user);
 

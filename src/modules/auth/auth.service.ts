@@ -181,7 +181,7 @@ export class AuthService {
     const EXPIRE_TIME = 20 * 1000;
     const payload = {
       email: user.email,
-      sub: user.id,
+      id: user.id,
       accountType: user.accountType,
     };
     const secret = this._config.get('SECRET');

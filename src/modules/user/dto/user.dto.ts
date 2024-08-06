@@ -93,6 +93,11 @@ export class UpdateUserDto {
 
   @ApiProperty()
   @IsOptional()
+  @IsEmail()
+  email: string;
+
+  @ApiProperty()
+  @IsOptional()
   @IsString()
   firstName?: string;
 
@@ -102,11 +107,11 @@ export class UpdateUserDto {
   lastName?: string;
 
   @ApiProperty()
-  @IsOptional()
-  @IsMobilePhone('es-AR')
-  phoneNumber?: string;
-
-  @ApiProperty()
   @Exclude()
   activationCode: string;
+
+  @ApiProperty()
+  @IsOptional()
+  @IsArray()
+  roles: Role[];
 }

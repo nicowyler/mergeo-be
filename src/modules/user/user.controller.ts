@@ -85,7 +85,7 @@ export class UserController {
   }
 
   @Patch('/:id')
-  @SetMetadata('permissions', [PERMISSIONS.EDIT_USERS])
+  @SetMetadata('permissions', [PERMISSIONS.EDIT_USERS.name])
   @UseGuards(AuthGuard, PermissionsGuard)
   @ResponseMessage('Usuario actualizado!')
   async editUser(
@@ -97,7 +97,7 @@ export class UserController {
   }
 
   @Delete('/:id')
-  @SetMetadata('permissions', [PERMISSIONS.DELETE_USERS])
+  @SetMetadata('permissions', [PERMISSIONS.DELETE_USERS.name])
   @UseGuards(AuthGuard, PermissionsGuard)
   @ResponseMessage('El usuario a sido borrado con exito!')
   async removeUser(

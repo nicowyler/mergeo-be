@@ -1,6 +1,7 @@
 import { CreateUserDto } from 'src/modules/user/dto';
 import { ACCOUNT_TYPE, ErrorMessages } from '../../../common/enum';
 import {
+  IsArray,
   IsEmail,
   IsEnum,
   IsNotEmpty,
@@ -10,6 +11,7 @@ import {
 } from 'class-validator';
 import { CreateCompanyDto } from 'src/modules/company/dto';
 import { ApiProperty } from '@nestjs/swagger';
+import { Role } from 'src/modules/role/role.entity';
 
 export class UserDto {
   @ApiProperty()
@@ -78,6 +80,15 @@ export class AddUserDto {
 
   @IsEmail()
   email: string;
+
+  @IsString()
+  firstName: string;
+
+  @IsString()
+  lastName: string;
+
+  @IsArray()
+  roles: Role[];
 }
 
 export class LoginDto {
