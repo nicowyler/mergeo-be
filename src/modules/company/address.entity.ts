@@ -1,8 +1,8 @@
+import { Branch } from 'src/modules/company/branch.entity';
 import { Company } from '../../modules/company/company.entity';
 import {
   Column,
   Entity,
-  JoinColumn,
   OneToOne,
   Point,
   PrimaryGeneratedColumn,
@@ -20,6 +20,8 @@ export class Address {
   polygon: Point;
 
   @OneToOne(() => Company, (company) => company.address)
-  @JoinColumn()
   company: Company;
+
+  @OneToOne(() => Branch, (branch) => branch.address)
+  branch: Branch;
 }

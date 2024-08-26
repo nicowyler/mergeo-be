@@ -10,7 +10,6 @@ import { Address, Company } from '../../modules/company/company.entity';
 import {
   BranchesResponseDto,
   CreateBranchDto,
-  CreateBranchResponseDto,
   CreateCompanyDto,
   UpdateBranchDto,
   UpdateCompanyDto,
@@ -18,7 +17,6 @@ import {
 import { ErrorMessages } from '../../common/enum/errorMessages.enum';
 import { Branch } from '../../modules/company/branch.entity';
 import { UUID } from 'crypto';
-import { plainToInstance } from 'class-transformer';
 import { User } from 'src/modules/user/user.entity';
 
 @Injectable()
@@ -28,6 +26,8 @@ export class CompanyService {
     private readonly companyRepository: Repository<Company>,
     @InjectRepository(Branch)
     private readonly branchRepository: Repository<Branch>,
+    @InjectRepository(Address)
+    private readonly addressRepository: Repository<Address>,
   ) {}
 
   async createCompany(body: CreateCompanyDto) {
@@ -70,18 +70,20 @@ export class CompanyService {
   }
 
   async getCompanyById(companyId: string) {
-    const companyExists = await this.companyRepository.findOneBy({
-      id: companyId,
-    });
-    if (!companyExists) {
-      throw new NotFoundException(
-        `${ErrorMessages.COMPANY_NOT_FOUND} ${companyId}`,
-      );
-    }
     try {
+      const companyExists = await this.companyRepository.findOneBy({
+        id: companyId,
+      });
+      if (!companyExists) {
+        throw new NotFoundException(
+          `${ErrorMessages.COMPANY_NOT_FOUND} ${companyId}`,
+        );
+      }
       const company = await this.companyRepository
         .createQueryBuilder('company')
         .leftJoinAndSelect('company.users', 'users')
+        .leftJoinAndSelect('company.branches', 'branches')
+        .leftJoinAndSelect('company.address', 'address')
         .select([
           'company',
           'users.id',
@@ -89,14 +91,18 @@ export class CompanyService {
           'users.lastName',
           'users.email',
           'users.accountType',
+          'branches.id',
+          'branches.name',
+          'address.id',
+          'address.name',
+          'address.polygon',
         ])
         .where('company.id = :id', { id: companyId })
         .getOne();
 
       return company;
     } catch (error) {
-      console.log(error);
-      return error;
+      throw error;
     }
   }
 
@@ -130,84 +136,129 @@ export class CompanyService {
           `${ErrorMessages.COMPANY_NOT_FOUND} ${companyId}`,
         );
       } else {
-        throw new InternalServerErrorException();
+        throw error;
       }
     }
   }
 
-  async createBranch(id: UUID, body: CreateBranchDto) {
-    // Find the company by ID
-    const company = await this.companyRepository.findOneBy({
-      id: id,
-    });
-    if (!company) {
-      throw new NotFoundException(`${ErrorMessages.COMPANY_NOT_FOUND} ${id}`);
-    }
+  async createBranch(
+    companyId: string,
+    createBranchDto: CreateBranchDto,
+  ): Promise<Omit<Branch, 'company'>> {
     try {
-      // Create a new branch
-      const branch = this.branchRepository.create({ ...body, company });
+      const company = await this.companyRepository.findOne({
+        where: { id: companyId },
+        relations: ['branches'], // Include branches in the query
+      });
 
-      // Save the branch
+      if (!company) {
+        throw new NotFoundException(
+          `${ErrorMessages.COMPANY_NOT_FOUND} ${companyId}`,
+        );
+      }
+
+      const address = new Address();
+      address.name = createBranchDto.address.name;
+      address.polygon = {
+        type: 'Point',
+        coordinates: createBranchDto.address.polygon.coordinates.reverse(),
+      };
+
+      const savedAddress = await this.addressRepository.save(address);
+      const branch = new Branch();
+      branch.name = createBranchDto.name;
+      branch.email = createBranchDto.email;
+      branch.phoneNumber = createBranchDto.phoneNumber;
+      branch.company = company;
+      branch.address = savedAddress;
+
       const savedBranch = await this.branchRepository.save(branch);
 
-      // Transform the saved branch into the response DTO
-      const response = plainToInstance(CreateBranchResponseDto, savedBranch, {
-        excludeExtraneousValues: true,
-      });
-      response.company = { id: company.id, name: company.name };
+      const branchWithoutCompany = {
+        id: savedBranch.id,
+        name: savedBranch.name,
+        email: savedBranch.email,
+        phoneNumber: savedBranch.phoneNumber,
+        address: savedBranch.address,
+        // Add other properties if necessary
+      };
 
-      return response;
+      return branchWithoutCompany;
     } catch (error) {
       if (error.code === '23505') {
         throw new ConflictException(ErrorMessages.BRANCH_NAME_TAKEN);
       } else {
-        throw new InternalServerErrorException();
+        throw error;
       }
     }
   }
 
   async updateBranch(id: UUID, body: UpdateBranchDto) {
     try {
-      const branch = await this.branchRepository.save({ id, ...body });
-      return branch;
+      const branch = await this.branchRepository.findOne({
+        where: { id },
+        relations: ['address'], // Load the related address
+      });
+
+      if (!branch) {
+        throw new NotFoundException(`${ErrorMessages.BRANCH_NOT_FOUND} ${id}`);
+      }
+
+      // Update branch properties
+      branch.name = body.name ?? branch.name;
+      branch.email = body.email ?? branch.email;
+      branch.phoneNumber = body.phoneNumber ?? branch.phoneNumber;
+
+      // Update the address if provided in the DTO
+      if (body.address) {
+        branch.address = { ...branch.address, ...body.address };
+      }
+
+      // Save the updated branch
+      const updatedBranch = await this.branchRepository.save(branch);
+      return updatedBranch;
     } catch (error) {
       if (error.code === '23502') {
         throw new NotFoundException(`${ErrorMessages.BRANCH_NOT_FOUND} ${id}`);
       } else {
-        throw new InternalServerErrorException();
+        throw error;
       }
     }
   }
 
-  async getBranches(companyId: UUID) {
-    // Find the company by ID
-    const company = await this.companyRepository.findOneBy({
-      id: companyId,
-    });
-    if (!company) {
-      throw new NotFoundException(
-        `${ErrorMessages.COMPANY_NOT_FOUND} ${companyId}`,
-      );
+  async getBranches(companyId: string): Promise<BranchesResponseDto> {
+    try {
+      const company = await this.companyRepository.findOne({
+        where: { id: companyId },
+        relations: ['branches', 'branches.address'], // Load related branches and addresses
+      });
+
+      if (!company) {
+        throw new NotFoundException('Company not found');
+      }
+
+      const branches = await this.branchRepository.find({
+        where: { company: { id: companyId } },
+        relations: ['address'], // Ensure address is included
+      });
+
+      const result: BranchesResponseDto = {
+        company: {
+          id: company.id,
+          name: company.name,
+          branches: branches.map((branch) => ({
+            id: branch.id,
+            name: branch.name,
+            email: branch.email,
+            phoneNumber: branch.phoneNumber,
+            address: branch.address,
+          })),
+        },
+      };
+
+      return result;
+    } catch (error) {
+      throw error;
     }
-    // Fetch all branches associated with the company
-    const branches = await this.branchRepository
-      .createQueryBuilder('branch')
-      .leftJoinAndSelect('branch.company', 'company')
-      .select(['branch.id', 'branch.name', 'company.id', 'company.name'])
-      .where('company.id = :companyId', { companyId })
-      .getMany();
-
-    const result: BranchesResponseDto = {
-      company: {
-        id: company.id,
-        name: company.name,
-        branches: branches.map((branch) => ({
-          id: branch.id,
-          name: branch.name,
-        })),
-      },
-    };
-
-    return result;
   }
 }

@@ -19,7 +19,6 @@ import {
 import { CompanyService } from '../../modules/company/company.service';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
-import { response } from 'express';
 import { RoleService } from 'src/modules/role/role.service';
 
 @Injectable()

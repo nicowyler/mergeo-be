@@ -1,6 +1,6 @@
 // permissions.guard.ts
 import { Permission } from '../modules/role/permission.entity';
-import { Role } from '../modules/role/role.entity';
+import { Roles } from '../modules/role/role.entity';
 import { UserService } from '../modules/user/user.service';
 import {
   Injectable,
@@ -36,7 +36,7 @@ export class PermissionsGuard implements CanActivate {
     const storedUser = await this.userService.getUser(user.id);
 
     // Check if user's roles have the required permissions
-    const hasPermission = storedUser.role.some((role: Role) =>
+    const hasPermission = storedUser.roles.some((role: Roles) =>
       role.permissions.some((permission: Permission) =>
         requiredPermissions.includes(permission.name),
       ),

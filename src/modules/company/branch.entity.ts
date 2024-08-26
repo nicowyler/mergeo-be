@@ -4,8 +4,10 @@ import {
   PrimaryGeneratedColumn,
   ManyToOne,
   Unique,
+  OneToOne,
+  JoinColumn,
 } from 'typeorm';
-import { Company } from './company.entity';
+import { Address, Company } from './company.entity';
 
 @Entity()
 @Unique('UQ_NAME', ['name'])
@@ -22,9 +24,11 @@ export class Branch {
   @Column()
   phoneNumber: string;
 
-  @Column()
-  address: string;
+  @OneToOne(() => Address, { nullable: true }) // Ensure this is a ManyToOne or OneToOne as needed
+  @JoinColumn({ name: 'addressId' })
+  address: Address;
 
   @ManyToOne(() => Company, (company) => company.branches)
+  @JoinColumn({ name: 'companyId' }) // Optional: Customize the join column name
   company: Company;
 }

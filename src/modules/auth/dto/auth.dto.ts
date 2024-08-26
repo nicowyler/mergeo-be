@@ -11,7 +11,7 @@ import {
 } from 'class-validator';
 import { CreateCompanyDto } from 'src/modules/company/dto';
 import { ApiProperty } from '@nestjs/swagger';
-import { Role } from 'src/modules/role/role.entity';
+import { Roles } from 'src/modules/role/role.entity';
 
 export class UserDto {
   @ApiProperty()
@@ -88,7 +88,7 @@ export class AddUserDto {
   lastName: string;
 
   @IsArray()
-  roles: Role[];
+  roles: Roles[];
 }
 
 export class LoginDto {

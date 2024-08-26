@@ -108,6 +108,7 @@ export class AuthController {
       lastName,
       email: userEmail,
       accountType,
+      company,
     } = validUser;
 
     response.cookie('tokens', tokens, {
@@ -123,7 +124,7 @@ export class AuthController {
       accountType: accountType,
       name: `${firstName} ${lastName}`,
     };
-    authDto.company = validUser.company;
+    authDto.company = company;
 
     return authDto;
   }

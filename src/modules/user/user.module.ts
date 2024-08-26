@@ -9,16 +9,22 @@ import { PassportModule } from '@nestjs/passport';
 import { AuthGuard } from '../../guards/auth.guard';
 import { JwtService } from '@nestjs/jwt';
 import { Permission } from '../../modules/role/permission.entity';
-import { Role } from '../../modules/role/role.entity';
-import { Company } from '../../modules/company/company.entity';
+import { Roles } from '../../modules/role/role.entity';
+import { Address, Company } from '../../modules/company/company.entity';
 import { Branch } from '../../modules/company/branch.entity';
 import { CompanyService } from '../company/company.service';
 import { RoleService } from 'src/modules/role/role.service';
-import { RoleModule } from 'src/modules/role/role.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Role, Permission, Company, Branch]),
+    TypeOrmModule.forFeature([
+      User,
+      Roles,
+      Permission,
+      Company,
+      Branch,
+      Address,
+    ]),
     TypedEventEmitterModule,
     PassportModule,
   ],

@@ -5,6 +5,8 @@ import {
   OneToMany,
   Unique,
   OneToOne,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 import { DateAudit } from '../../common/entities/base.entity';
 import { Branch } from '../../modules/company/branch.entity';
@@ -28,6 +30,7 @@ export class Company extends DateAudit {
   cuit: number;
 
   @OneToOne(() => Address, (address) => address.company, { cascade: true })
+  @JoinColumn({ name: 'addressId' })
   address: Address;
 
   @Column()
@@ -36,7 +39,7 @@ export class Company extends DateAudit {
   @OneToMany(() => User, (user) => user.company)
   users: User[];
 
-  @OneToMany(() => Branch, (branch) => branch.company)
+  @OneToMany(() => Branch, (branch) => branch.company, { cascade: true })
   branches: Branch[];
 }
 

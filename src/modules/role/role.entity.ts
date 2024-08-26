@@ -7,7 +7,6 @@ import {
   PrimaryGeneratedColumn,
   ManyToMany,
   JoinTable,
-  ManyToOne,
   Unique,
   CreateDateColumn,
   UpdateDateColumn,
@@ -15,7 +14,7 @@ import {
 
 @Entity()
 @Unique('UQ_ROLE_NAME', ['name'])
-export class Role extends DateAudit {
+export class Roles extends DateAudit {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -29,9 +28,9 @@ export class Role extends DateAudit {
   @Column('uuid')
   companyId: string;
 
-  @ManyToOne(() => User, (user) => user.role)
+  @ManyToMany(() => User, (user) => user.roles)
   @JoinTable()
-  user: User;
+  users: User[];
 
   @CreateDateColumn()
   created?: Date;

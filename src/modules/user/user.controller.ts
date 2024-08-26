@@ -24,7 +24,7 @@ import { AddRolesToUserDto } from 'src/modules/role/dto/role.dto';
 import { GetUsersDto } from 'src/modules/user/dto/user.dto';
 import { ApiTags } from '@nestjs/swagger';
 import { RoleService } from 'src/modules/role/role.service';
-import { Role } from 'src/modules/role/role.entity';
+import { Roles } from 'src/modules/role/role.entity';
 
 @ApiTags('Usuario')
 @UseInterceptors(TransformInterceptor)
@@ -45,7 +45,7 @@ export class UserController {
 
     const usersList = [];
     users.forEach((item) => {
-      const updatedRoles = item.role.map((role) => {
+      const updatedRoles = item.roles.map((role) => {
         const updatedPermissions = allPermissions.map((perm) => ({
           id: perm.id,
           name: perm.name,
@@ -54,7 +54,7 @@ export class UserController {
           hasPermission: role.permissions.some((r) => r.name === perm.name),
         }));
 
-        return plainToInstance(Role, {
+        return plainToInstance(Roles, {
           ...role,
           permissions: updatedPermissions,
         });

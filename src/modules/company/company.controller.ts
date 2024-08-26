@@ -59,7 +59,7 @@ export class CompanyController {
   }
 
   // CREATE BRANCH
-  @Post(':id/branch')
+  @Post('/:id/branch')
   @UseGuards(AuthGuard)
   @ResponseMessage('Sucursal creada con exito!')
   async createBranch(

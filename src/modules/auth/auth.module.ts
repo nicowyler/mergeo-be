@@ -9,15 +9,22 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from '../user/user.entity';
 import { Permission } from '../../modules/role/permission.entity';
 import { CompanyService } from '../../modules/company/company.service';
-import { Company } from '../../modules/company/company.entity';
+import { Address, Company } from '../../modules/company/company.entity';
 import { Branch } from '../../modules/company/branch.entity';
 import { RoleService } from 'src/modules/role/role.service';
-import { Role } from 'src/modules/role/role.entity';
+import { Roles } from 'src/modules/role/role.entity';
 import { HttpModule } from '@nestjs/axios';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Company, Branch, Permission, Role]),
+    TypeOrmModule.forFeature([
+      User,
+      Company,
+      Branch,
+      Permission,
+      Roles,
+      Address,
+    ]),
     AuthProvider,
     HttpModule,
   ],

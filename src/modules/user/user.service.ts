@@ -15,7 +15,6 @@ import { TypedEventEmitter } from '../../modules/event-emitter/typed-event-emitt
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { WhatsApp } from '../../common/enum/email.enum';
-import { Role } from '../../modules/role/role.entity';
 import { Permission } from '../../modules/role/permission.entity';
 import { Company } from '../../modules/company/company.entity';
 import { User } from './user.entity';
@@ -28,6 +27,7 @@ import { plainToInstance } from 'class-transformer';
 import { CompanyService } from 'src/modules/company/company.service';
 import { AddUserDto } from 'src/modules/auth/dto';
 import { passwordGen } from 'src/common/utils';
+import { Roles } from 'src/modules/role/role.entity';
 
 @Injectable()
 export class UserService {
@@ -100,6 +100,7 @@ export class UserService {
         ...userDto,
         company,
         password: hashedPassword,
+        roles: userDto.roles,
       });
 
       await this.userRepository.save(user);
@@ -173,18 +174,22 @@ export class UserService {
   }
 
   async getUsers(companyId: string): Promise<User[]> {
-    const users = await this.userRepository.find({
-      where: { company: { id: companyId } },
-      relations: ['role', 'company', 'role.permissions'],
-    });
+    try {
+      const users = await this.userRepository.find({
+        where: { company: { id: companyId } },
+        relations: ['roles', 'company', 'roles.permissions'],
+      });
 
-    return users;
+      return users;
+    } catch (error) {
+      console.log(error);
+    }
   }
 
   async getUser(id: string): Promise<User> {
     const user = await this.userRepository.findOne({
       where: { id: id },
-      relations: ['role', 'role.permissions'],
+      relations: ['roles', 'roles.permissions'],
     });
 
     if (!user)
@@ -210,7 +215,7 @@ export class UserService {
       // Fetch user along with current roles
       const user = await this.userRepository.findOne({
         where: { id },
-        relations: ['role'],
+        relations: ['roles'],
       });
       if (!user) {
         throw new NotFoundException(`${ErrorMessages.USER_NOT_FOUND} ${id}`);
@@ -224,7 +229,7 @@ export class UserService {
         const roles = await this.roleService.getRolesById(body.roles);
 
         // Update user roles
-        user.role = roles;
+        user.roles = roles;
       }
 
       // Save updated user
@@ -286,13 +291,13 @@ export class UserService {
   async removeUser(id: string): Promise<User> {
     const user = await this.userRepository.findOne({
       where: { id },
-      relations: ['role'],
+      relations: ['roles'],
     });
 
     if (!user)
       throw new NotFoundException(`${ErrorMessages.USER_NOT_FOUND} ${id}`);
 
-    user.role = [];
+    user.roles = [];
 
     this.userRepository.remove(user);
 
@@ -329,7 +334,7 @@ export class UserService {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { user: _, ...roleWithoutUser } = roleCreated;
+    const { users: _, ...roleWithoutUser } = roleCreated;
 
     const response = plainToInstance(ResponseCreateRoleDto, {
       ...roleWithoutUser,
@@ -341,12 +346,12 @@ export class UserService {
 
   async addRolesToUser(
     userId: string,
-    rolesId: Pick<Role, 'id'>[],
+    rolesId: Pick<Roles, 'id'>[],
   ): Promise<User> {
     // Fetch the user by their ID
     const user = await this.userRepository.findOne({
       where: { id: userId },
-      relations: ['role'], // Ensure the roles relation is loaded
+      relations: ['roles'], // Ensure the roles relation is loaded
     });
 
     if (!user) {
@@ -361,7 +366,7 @@ export class UserService {
     }
 
     // Add the roles to the user
-    user.role = [...user.role, ...role];
+    user.roles = [...user.roles, ...role];
 
     // Save the user entity to update the relationship in the database
     return await this.userRepository.save(user);
@@ -372,11 +377,11 @@ export class UserService {
     if (!user)
       throw new NotFoundException(`${ErrorMessages.USER_NOT_FOUND} ${id}`);
 
-    const roleExists = user.role.find((userRole) => userRole.id === roleId);
+    const roleExists = user.roles.find((userRole) => userRole.id === roleId);
     if (!roleExists) {
       throw new NotFoundException(`${ErrorMessages.ROLE_NOT_FOUND} ${roleId}`);
     }
-    user.role = user.role.filter((userRole) => userRole.id !== roleId);
+    user.roles = user.roles.filter((userRole) => userRole.id !== roleId);
     this.userRepository.save(user);
     return user;
   }
@@ -397,7 +402,7 @@ export class UserService {
     }
 
     // Step 2: Find the role by ID
-    const role = user.role.find((userRole) => userRole.id === roleId);
+    const role = user.roles.find((userRole) => userRole.id === roleId);
     if (!role) {
       throw new Error('Role not found');
     }

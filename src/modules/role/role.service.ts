@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { In, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Role } from '../../modules/role/role.entity';
+import { Roles } from '../../modules/role/role.entity';
 import { Permission } from '../../modules/role/permission.entity';
 import { CreateRoleDto } from './dto';
 import { ErrorMessages } from '../../common/enum';
@@ -16,8 +16,8 @@ import { User } from 'src/modules/user/user.entity';
 @Injectable()
 export class RoleService {
   constructor(
-    @InjectRepository(Role)
-    private readonly roleRepository: Repository<Role>,
+    @InjectRepository(Roles)
+    private readonly roleRepository: Repository<Roles>,
     @InjectRepository(Permission)
     private readonly permissionRepository: Repository<Permission>,
   ) {}
@@ -25,17 +25,18 @@ export class RoleService {
     companyId: string,
     user: User,
     createRoleDto: CreateRoleDto,
-  ): Promise<Role> {
+  ): Promise<Roles> {
     try {
-      const role = new Role();
-      role.name = createRoleDto.name;
-      role.permissions = createRoleDto.permissions;
-      role.companyId = companyId;
-      role.user = user;
+      const roles = new Roles();
+      roles.name = createRoleDto.name;
+      roles.permissions = createRoleDto.permissions;
+      roles.companyId = companyId;
+      roles.users = [user];
 
-      const roleCreated = await this.roleRepository.save(role);
+      const roleCreated = await this.roleRepository.save(roles);
       return roleCreated;
     } catch (error) {
+      console.error('Error creating role:', error);
       if (error.code === '23502') {
         throw new NotFoundException(`User with id ${user.id} not found`);
       } else if (error.code === '23505') {
@@ -64,7 +65,7 @@ export class RoleService {
   async getRoles(companyId: string): Promise<GetRoleDto> {
     const roles = await this.roleRepository.find({
       where: { companyId: companyId },
-      relations: ['user', 'permissions'],
+      relations: ['users', 'permissions'],
     });
     const allPermissions = await this.getPermissions();
 
@@ -77,7 +78,7 @@ export class RoleService {
         hasPermission: role.permissions.some((r) => r.name === perm.name),
       }));
 
-      const { companyId, user, ...roleWithoutCompanyIdAndUser } = role;
+      const { companyId, users, ...roleWithoutCompanyIdAndUser } = role;
 
       return {
         ...roleWithoutCompanyIdAndUser,
@@ -88,14 +89,14 @@ export class RoleService {
     return { companyId: companyId, roles: updatedRoles };
   }
 
-  async getRolesById(roleIds: Pick<Role, 'id'>[]): Promise<Role[]> {
+  async getRolesById(roleIds: Pick<Roles, 'id'>[]): Promise<Roles[]> {
     const roles = await this.roleRepository.find({
       where: { id: In(roleIds) },
     });
     return roles;
   }
 
-  async updateRole(id: string, body: UpdateRoleDto): Promise<Role> {
+  async updateRole(id: string, body: UpdateRoleDto): Promise<Roles> {
     console.log(body);
 
     const role = await this.roleRepository.save({
@@ -107,10 +108,10 @@ export class RoleService {
 
   async deleteRole(id: string): Promise<void> {
     const roles = await this.roleRepository.find({
-      relations: ['user'],
+      relations: ['users'],
     });
 
-    if (roles.length && roles[0].user) {
+    if (roles.length && roles[0].users) {
       throw new ConflictException(ErrorMessages.ROLE_HAS_USER);
     }
 

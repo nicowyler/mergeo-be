@@ -26,12 +26,7 @@ export class CreateCompanyDto {
 
   @ApiProperty()
   @IsNotEmpty()
-  address: {
-    name: string;
-    polygon: {
-      coordinates: number[];
-    };
-  };
+  address: Address;
 
   @ApiProperty()
   @IsNotEmpty()

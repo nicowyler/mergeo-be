@@ -1,4 +1,4 @@
-import { Role } from 'src/modules/role/role.entity';
+import { Roles } from 'src/modules/role/role.entity';
 import { Permission } from '../../../modules/role/permission.entity';
 import {
   IsArray,
@@ -30,7 +30,7 @@ export class GetRoleDto {
 
   @ApiProperty()
   @IsArray()
-  roles: Pick<Role, 'name' | 'id' | 'permissions'>[];
+  roles: Pick<Roles, 'name' | 'id' | 'permissions'>[];
 }
 
 export class UpdateRoleDto extends CreateRoleDto {
@@ -47,5 +47,5 @@ export class UpdateRoleDto extends CreateRoleDto {
 export class AddRolesToUserDto {
   @ApiProperty()
   @IsArray()
-  roles: Pick<Role, 'id'>[];
+  roles: Pick<Roles, 'id'>[];
 }

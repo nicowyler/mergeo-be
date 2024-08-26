@@ -9,6 +9,8 @@ import {
   IsOptional,
   IsString,
 } from 'class-validator';
+import { Address } from 'src/modules/company/address.entity';
+import { Branch } from 'src/modules/company/branch.entity';
 
 export class CreateBranchDto {
   @ApiProperty()
@@ -21,28 +23,13 @@ export class CreateBranchDto {
   email: string;
 
   @ApiProperty()
-  @IsMobilePhone('es-AR')
+  @IsMobilePhone('es-AR', { strictMode: false })
   phoneNumber: string;
 
   @ApiProperty()
   @IsNotEmpty()
-  @IsString()
-  address: string;
-
-  @ApiProperty()
-  @IsNotEmpty()
-  @IsString()
-  province: string;
-
-  @ApiProperty()
-  @IsNotEmpty()
-  @IsString()
-  locality: string;
-
-  @ApiProperty()
-  @IsNotEmpty()
-  @IsNumber()
-  zipCode: number;
+  @IsObject()
+  address: Address;
 }
 
 export class CompanyDtoResponse {
@@ -53,6 +40,10 @@ export class CompanyDtoResponse {
   @ApiProperty()
   @Expose()
   name: string;
+
+  @ApiProperty()
+  @Expose()
+  branches: Branch[];
 }
 
 export class CreateBranchResponseDto {
@@ -74,24 +65,7 @@ export class CreateBranchResponseDto {
 
   @ApiProperty()
   @Expose()
-  address: string;
-
-  @ApiProperty()
-  @Expose()
-  province: string;
-
-  @ApiProperty()
-  @Expose()
-  locality: string;
-
-  @ApiProperty()
-  @Expose()
-  zipCode: number;
-
-  @ApiProperty({ type: () => [CompanyDtoResponse] })
-  @Expose()
-  @Type(() => CompanyDtoResponse)
-  company: CompanyDtoResponse;
+  address: Address;
 }
 
 export class UpdateBranchDto {
@@ -115,7 +89,7 @@ export class UpdateBranchDto {
   @IsNotEmpty()
   @IsString()
   @IsOptional()
-  address?: string;
+  address?: Address;
 
   @ApiProperty()
   @IsNotEmpty()

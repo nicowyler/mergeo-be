@@ -14,7 +14,7 @@ import {
   IsUUID,
 } from 'class-validator';
 import { BaseDateResponseDTO } from 'src/common/dto/baseDate.dto';
-import { Role } from 'src/modules/role/role.entity';
+import { Roles } from 'src/modules/role/role.entity';
 
 export class UUIDDto {
   @ApiProperty()
@@ -82,7 +82,7 @@ export class UserResponseDto extends CreateUserDto {
 
   @ApiProperty()
   @IsArray()
-  roles: Role[];
+  roles: Roles[];
 }
 
 export class UpdateUserDto {
@@ -113,5 +113,5 @@ export class UpdateUserDto {
   @ApiProperty()
   @IsOptional()
   @IsArray()
-  roles: Role[];
+  roles: Roles[];
 }
