@@ -6,3 +6,5 @@ export {
   CompanyDtoResponse,
   CreateBranchResponseDto,
 } from './Branch.dto';
+
+export { PickUpPointDto, UpdatePickUpPoint } from './PickUpPoint.dto';

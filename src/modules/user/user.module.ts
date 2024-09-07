@@ -10,10 +10,11 @@ import { AuthGuard } from '../../guards/auth.guard';
 import { JwtService } from '@nestjs/jwt';
 import { Permission } from '../../modules/role/permission.entity';
 import { Roles } from '../../modules/role/role.entity';
-import { Address, Company } from '../../modules/company/company.entity';
+import { Company } from '../../modules/company/company.entity';
 import { Branch } from '../../modules/company/branch.entity';
 import { CompanyService } from '../company/company.service';
 import { RoleService } from 'src/modules/role/role.service';
+import { Address } from 'src/modules/company/address.entity';
 
 @Module({
   imports: [

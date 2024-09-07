@@ -9,11 +9,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from '../user/user.entity';
 import { Permission } from '../../modules/role/permission.entity';
 import { CompanyService } from '../../modules/company/company.service';
-import { Address, Company } from '../../modules/company/company.entity';
+import { Company } from '../../modules/company/company.entity';
 import { Branch } from '../../modules/company/branch.entity';
 import { RoleService } from 'src/modules/role/role.service';
 import { Roles } from 'src/modules/role/role.entity';
 import { HttpModule } from '@nestjs/axios';
+import { Address } from 'src/modules/company/address.entity';
 
 @Module({
   imports: [

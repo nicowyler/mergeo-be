@@ -21,8 +21,8 @@ export class CreateCompanyDto {
 
   @ApiProperty()
   @IsNotEmpty()
-  @IsString()
-  cuit: string;
+  @IsNumber()
+  cuit?: number;
 
   @ApiProperty()
   @IsNotEmpty()
@@ -45,16 +45,6 @@ export class UpdateCompanyDto {
   @IsOptional()
   @IsString()
   name?: string;
-
-  @ApiProperty()
-  @IsOptional()
-  @IsString()
-  razonSocial?: string;
-
-  @ApiProperty()
-  @IsOptional()
-  @IsNumber()
-  cuit?: number;
 
   @ApiProperty()
   @IsOptional()

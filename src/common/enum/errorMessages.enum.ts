@@ -6,6 +6,7 @@ export enum ErrorMessages {
   USER_NOT_AUTH = 'El email o la contraseña son invalidos!',
   USER_PASSWORD_RESET_LINK_EXPIRED = 'El link de reseteo de password ha expirado!',
   USER_PASSWORD_RESET_LINK_NOT_VALID = 'El link de reseteo de password no es valido!',
+  USER_DELETE_OWN_ACCOUNT = 'No puede borrar su propia cuenta!',
 
   // COMPANY
   COMPANY_NOT_FOUND = 'No se encontro ninguna compania con el id',
@@ -15,6 +16,10 @@ export enum ErrorMessages {
   // COMPANY / BRANCH
   BRANCH_NOT_FOUND = 'No se encontro ninguna sucursak con el id',
   BRANCH_NAME_TAKEN = 'Ya existe una Sucursal con ese nombre',
+
+  //PICK UP POINT
+  PICK_UP_POINT_NOT_FOUND = 'No se encontro ningun punto de retiro con el id',
+  PICK_UP_POINT_NAME_TAKEN = 'Ya existe un punto de retiro con ese nombre',
 
   // COMPANY
   ROLE_NAME_TAKEN = 'El rol ya existe',

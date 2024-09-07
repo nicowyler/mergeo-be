@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Address, Company } from '../../modules/company/company.entity';
+import { Company } from '../../modules/company/company.entity';
 import {
   BranchesResponseDto,
   CreateBranchDto,
@@ -18,6 +18,8 @@ import { ErrorMessages } from '../../common/enum/errorMessages.enum';
 import { Branch } from '../../modules/company/branch.entity';
 import { UUID } from 'crypto';
 import { User } from 'src/modules/user/user.entity';
+import { convertCoordinatesForPostGIS } from 'src/common/utils/postGis.utils';
+import { Address } from 'src/modules/company/address.entity';
 
 @Injectable()
 export class CompanyService {
@@ -33,17 +35,17 @@ export class CompanyService {
   async createCompany(body: CreateCompanyDto) {
     console.log(body);
     try {
+      const coordinatesArray: number[] = body.address.polygon.coordinates;
+
       const newAddress = new Address();
+      newAddress.locationId = body.address.id;
       newAddress.name = body.address.name;
-      newAddress.polygon = {
-        type: 'Point',
-        coordinates: body.address.polygon.coordinates.reverse(),
-      };
+      newAddress.polygon = convertCoordinatesForPostGIS(coordinatesArray);
 
       const newCompany = new Company();
       newCompany.name = body.name;
       newCompany.razonSocial = body.razonSocial;
-      newCompany.cuit = parseInt(body.cuit);
+      newCompany.cuit = body.cuit;
       newCompany.address = newAddress;
       newCompany.activity = body.activity;
 
@@ -123,18 +125,70 @@ export class CompanyService {
     return company;
   }
 
-  async updateCompany(companyId: string, body: UpdateCompanyDto) {
+  async updateCompany(id: UUID, body: UpdateCompanyDto) {
     try {
-      const company = await this.companyRepository.save({
-        id: companyId,
-        ...body,
+      // Find the branch and its related address
+      const company = await this.companyRepository.findOne({
+        where: { id },
+        relations: ['address'], // Load the related address
       });
-      return company;
+
+      if (!company) {
+        throw new NotFoundException(`${ErrorMessages.COMPANY_NOT_FOUND} ${id}`);
+      }
+
+      // Update company properties
+      const newCompany = new Company();
+      newCompany.name = body.name;
+      newCompany.activity = body.activity;
+
+      if (body.address) {
+        const { id: locationId, polygon, ...addressData } = body.address;
+
+        // Convert coordinates to PostGIS format
+        const postGISPolygon = polygon
+          ? convertCoordinatesForPostGIS(polygon.coordinates)
+          : undefined;
+
+        // Update the address data
+        const updatedAddressData = {
+          ...addressData,
+          polygon: postGISPolygon,
+        };
+
+        // Check if an address with the given locationId exists
+        let address = await this.addressRepository.findOne({
+          where: { locationId },
+        });
+
+        if (address) {
+          // Update existing address
+          address = { ...address, ...updatedAddressData };
+          address = await this.addressRepository.save(address);
+        } else {
+          // Create a new address if it does not exist
+          address = await this.addressRepository.save({
+            locationId,
+            ...updatedAddressData,
+          });
+        }
+
+        // Link the address to the company
+        newCompany.address = address;
+      }
+
+      // Save the updated company
+      await this.companyRepository.update(id, newCompany);
+
+      const updatedCompany = await this.companyRepository.findOne({
+        where: { id },
+        relations: ['address'], // Load the related address
+      });
+
+      return updatedCompany;
     } catch (error) {
       if (error.code === '23502') {
-        throw new NotFoundException(
-          `${ErrorMessages.COMPANY_NOT_FOUND} ${companyId}`,
-        );
+        throw new NotFoundException(`${ErrorMessages.BRANCH_NOT_FOUND} ${id}`);
       } else {
         throw error;
       }
@@ -158,11 +212,11 @@ export class CompanyService {
       }
 
       const address = new Address();
+      address.locationId = createBranchDto.address.id;
       address.name = createBranchDto.address.name;
-      address.polygon = {
-        type: 'Point',
-        coordinates: createBranchDto.address.polygon.coordinates.reverse(),
-      };
+      address.polygon = convertCoordinatesForPostGIS(
+        createBranchDto.address.polygon.coordinates,
+      );
 
       const savedAddress = await this.addressRepository.save(address);
       const branch = new Branch();
@@ -195,6 +249,7 @@ export class CompanyService {
 
   async updateBranch(id: UUID, body: UpdateBranchDto) {
     try {
+      // Find the branch and its related address
       const branch = await this.branchRepository.findOne({
         where: { id },
         relations: ['address'], // Load the related address
@@ -209,9 +264,39 @@ export class CompanyService {
       branch.email = body.email ?? branch.email;
       branch.phoneNumber = body.phoneNumber ?? branch.phoneNumber;
 
-      // Update the address if provided in the DTO
       if (body.address) {
-        branch.address = { ...branch.address, ...body.address };
+        const { id: locationId, polygon, ...addressData } = body.address;
+
+        // Convert coordinates to PostGIS format
+        const postGISPolygon = polygon
+          ? convertCoordinatesForPostGIS(polygon.coordinates)
+          : undefined;
+
+        // Update the address data
+        const updatedAddressData = {
+          ...addressData,
+          polygon: postGISPolygon,
+        };
+
+        // Check if an address with the given locationId exists
+        let address = await this.addressRepository.findOne({
+          where: { locationId },
+        });
+
+        if (address) {
+          // Update existing address
+          address = { ...address, ...updatedAddressData };
+          address = await this.addressRepository.save(address);
+        } else {
+          // Create a new address if it does not exist
+          address = await this.addressRepository.save({
+            locationId,
+            ...updatedAddressData,
+          });
+        }
+
+        // Link the address to the branch
+        branch.address = address;
       }
 
       // Save the updated branch
@@ -257,6 +342,22 @@ export class CompanyService {
       };
 
       return result;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async deleteBranch(branchId: string) {
+    try {
+      const branch = await this.branchRepository.find({
+        where: { id: branchId },
+        relations: ['address'], // Ensure address is included
+      });
+      if (!branch) {
+        throw new NotFoundException('branch not found');
+      }
+
+      this.branchRepository.remove(branch);
     } catch (error) {
       throw error;
     }

@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { CompanyService } from './company.service';
-import { Address, Company } from './company.entity';
+import { Company } from './company.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EncoderService } from '../auth/encoder.service';
 import { TypedEventEmitterModule } from '../../modules/event-emitter/typed-event-emitter.module';
@@ -14,6 +14,11 @@ import { CompanyController } from '../../modules/company/company.controller';
 import { UserService } from '../../modules/user/user.service';
 import { Permission } from '../../modules/role/permission.entity';
 import { RoleService } from 'src/modules/role/role.service';
+import { PickUpPointController } from 'src/modules/company/pickUpPoints/pickUpPoint.controller';
+import { PickUpPointService } from 'src/modules/company/pickUpPoints/pickUpPoint.service';
+import { Address } from 'src/modules/company/address.entity';
+import { PickUpPoint } from 'src/modules/company/pickUpPoints/pickUpPoint.entity';
+import { PickUpSchedule } from 'src/modules/company/pickUpPoints/pickUpSchedule.entity';
 
 @Module({
   imports: [
@@ -24,13 +29,16 @@ import { RoleService } from 'src/modules/role/role.service';
       Branch,
       Permission,
       Address,
+      PickUpPoint,
+      PickUpSchedule,
     ]),
     TypedEventEmitterModule,
     PassportModule,
   ],
-  controllers: [CompanyController],
+  controllers: [CompanyController, PickUpPointController],
   providers: [
     CompanyService,
+    PickUpPointService,
     UserService,
     RoleService,
     EncoderService,

@@ -90,24 +90,6 @@ export class UpdateBranchDto {
   @IsString()
   @IsOptional()
   address?: Address;
-
-  @ApiProperty()
-  @IsNotEmpty()
-  @IsString()
-  @IsOptional()
-  province?: string;
-
-  @ApiProperty()
-  @IsNotEmpty()
-  @IsString()
-  @IsOptional()
-  locality?: string;
-
-  @ApiProperty()
-  @IsNotEmpty()
-  @IsNumber()
-  @IsOptional()
-  zipCode?: number;
 }
 
 class CompanyResponseDto {

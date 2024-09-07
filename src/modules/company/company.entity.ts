@@ -5,13 +5,13 @@ import {
   OneToMany,
   Unique,
   OneToOne,
-  ManyToOne,
   JoinColumn,
 } from 'typeorm';
 import { DateAudit } from '../../common/entities/base.entity';
 import { Branch } from '../../modules/company/branch.entity';
 import { User } from '../../modules/user/user.entity';
 import { Address } from '../../modules/company/address.entity';
+import { PickUpPoint } from 'src/modules/company/pickUpPoints/pickUpPoint.entity';
 
 @Entity()
 @Unique('UQ_BUSINESS_NAME', ['razonSocial'])
@@ -41,6 +41,9 @@ export class Company extends DateAudit {
 
   @OneToMany(() => Branch, (branch) => branch.company, { cascade: true })
   branches: Branch[];
-}
 
-export { Address };
+  @OneToMany(() => PickUpPoint, (pickUpPoint) => pickUpPoint.company, {
+    cascade: true,
+  })
+  pickUpPoints: PickUpPoint[];
+}

@@ -14,6 +14,9 @@ export class Address {
   id: string;
 
   @Column()
+  locationId: string;
+
+  @Column()
   name: string;
 
   @Column('geometry', { spatialFeatureType: 'Point', srid: 4326 })

@@ -6,13 +6,15 @@ import {
   Unique,
   OneToOne,
   JoinColumn,
+  OneToMany,
 } from 'typeorm';
-import { Company } from './company.entity';
+import { Company } from '../company.entity';
+import { PickUpSchedule } from 'src/modules/company/pickUpPoints/pickUpSchedule.entity';
 import { Address } from 'src/modules/company/address.entity';
 
 @Entity()
-@Unique('UQ_NAME', ['name'])
-export class Branch {
+@Unique('UQ_PP_NAME', ['name'])
+export class PickUpPoint {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -29,7 +31,12 @@ export class Branch {
   @JoinColumn({ name: 'addressId' })
   address: Address;
 
-  @ManyToOne(() => Company, (company) => company.branches)
-  @JoinColumn({ name: 'companyId' }) // Optional: Customize the join column name
+  @ManyToOne(() => Company, (company) => company.pickUpPoints)
+  @JoinColumn({ name: 'companyId' })
   company: Company;
+
+  @OneToMany(() => PickUpSchedule, (schedule) => schedule.pickUpPoint, {
+    cascade: true,
+  })
+  schedules: PickUpSchedule[];
 }

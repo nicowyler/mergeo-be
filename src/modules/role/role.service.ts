@@ -31,7 +31,7 @@ export class RoleService {
       roles.name = createRoleDto.name;
       roles.permissions = createRoleDto.permissions;
       roles.companyId = companyId;
-      roles.users = [user];
+      if (user) roles.users = [user];
 
       const roleCreated = await this.roleRepository.save(roles);
       return roleCreated;
@@ -49,6 +49,10 @@ export class RoleService {
 
   async createAdminRole(companyId: string, user: User) {
     const permissions = await this.permissionRepository.find();
+    const adminRole = await this.roleRepository.findOne({
+      where: { name: 'Admin', companyId: companyId },
+    });
+    if (adminRole) return adminRole;
     return this.createRole(companyId, user, {
       name: 'Admin',
       permissions: permissions,
@@ -108,10 +112,11 @@ export class RoleService {
 
   async deleteRole(id: string): Promise<void> {
     const roles = await this.roleRepository.find({
+      where: { id: id },
       relations: ['users'],
     });
 
-    if (roles.length && roles[0].users) {
+    if (roles.length && roles[0].users.length) {
       throw new ConflictException(ErrorMessages.ROLE_HAS_USER);
     }
 

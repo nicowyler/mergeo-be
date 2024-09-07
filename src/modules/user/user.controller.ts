@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -8,6 +9,7 @@ import {
   Patch,
   Post,
   Query,
+  Request,
   SetMetadata,
   UseGuards,
   UseInterceptors,
@@ -25,6 +27,7 @@ import { GetUsersDto } from 'src/modules/user/dto/user.dto';
 import { ApiTags } from '@nestjs/swagger';
 import { RoleService } from 'src/modules/role/role.service';
 import { Roles } from 'src/modules/role/role.entity';
+import { ErrorMessages } from 'src/common/enum';
 
 @ApiTags('Usuario')
 @UseInterceptors(TransformInterceptor)
@@ -102,7 +105,13 @@ export class UserController {
   @ResponseMessage('El usuario a sido borrado con exito!')
   async removeUser(
     @Param('id', new ParseUUIDPipe()) id: string,
+    @Request() req,
   ): Promise<UserResponseDto> {
+    const currentUserId = req.user.id;
+
+    if (id === currentUserId) {
+      throw new BadRequestException(ErrorMessages.USER_DELETE_OWN_ACCOUNT);
+    }
     const deletedUser = await this.userService.removeUser(id);
     const userResponseDto = new UserResponseDto();
     userResponseDto.id = deletedUser.id;
