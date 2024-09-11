@@ -9,10 +9,14 @@ import { Company } from '../company.entity';
 import { PickUpPointDto, UpdatePickUpPoint } from '../dto';
 import { ErrorMessages } from '../../../common/enum/errorMessages.enum';
 import { UUID } from 'crypto';
-import { convertCoordinatesForPostGIS } from 'src/common/utils/postGis.utils';
+import {
+  convertCoordinatesForPostGIS,
+  transformLocationToPolygon,
+} from 'src/common/utils/postGis.utils';
 import { PickUpPoint } from 'src/modules/company/pickUpPoints/pickUpPoint.entity';
 import { Address } from 'src/modules/company/address.entity';
 import { PickUpSchedule } from 'src/modules/company/pickUpPoints/pickUpSchedule.entity';
+import { plainToClass } from 'class-transformer';
 
 @Injectable()
 export class PickUpPointService {
@@ -46,8 +50,8 @@ export class PickUpPointService {
       const address = new Address();
       address.locationId = pickUpPointDto.address.id;
       address.name = pickUpPointDto.address.name;
-      address.polygon = convertCoordinatesForPostGIS(
-        pickUpPointDto.address.polygon.coordinates,
+      address.location = convertCoordinatesForPostGIS(
+        pickUpPointDto.address.location.coordinates,
       );
 
       let schedules = [];
@@ -148,11 +152,11 @@ export class PickUpPointService {
       pickUpPoint.schedules = updatedSchedules;
 
       if (body.address) {
-        const { id: locationId, polygon, ...addressData } = body.address;
+        const { id: locationId, location, ...addressData } = body.address;
 
         // Convert coordinates to PostGIS format
-        const postGISPolygon = polygon
-          ? convertCoordinatesForPostGIS(polygon.coordinates)
+        const postGISPolygon = location
+          ? convertCoordinatesForPostGIS(location.coordinates)
           : undefined;
 
         // Update the address data
@@ -177,16 +181,19 @@ export class PickUpPointService {
             ...updatedAddressData,
           });
         }
-
-        // Link the address to the branch
-        pickUpPoint.address = address;
       }
 
       // Save the updated branch
       const updatedPickUpPoint = await this.pickUpPointRepository.save(
         pickUpPoint,
       );
-      return updatedPickUpPoint;
+
+      const transformedPickUpPoint = {
+        ...updatedPickUpPoint,
+        address: transformLocationToPolygon(updatedPickUpPoint.address), // Transform back
+      };
+
+      return transformedPickUpPoint;
     } catch (error) {
       if (error.code === '23502') {
         throw new NotFoundException(`${ErrorMessages.BRANCH_NOT_FOUND} ${id}`);
@@ -204,14 +211,31 @@ export class PickUpPointService {
           'pickUpPoints',
           'pickUpPoints.address',
           'pickUpPoints.schedules',
-        ], // Load related branches and addresses
+        ],
       });
 
       if (!company) {
         throw new NotFoundException(ErrorMessages.COMPANY_NOT_FOUND);
       }
 
-      return company.pickUpPoints;
+      // Transform each pickUpPoint's address by converting location to polygon
+      const transformedPickUpPoints = company.pickUpPoints.map(
+        (pickUpPoint) => {
+          if (pickUpPoint.address && pickUpPoint.address.location) {
+            // Map 'location' to 'polygon'
+            return {
+              ...pickUpPoint,
+              address: {
+                ...pickUpPoint.address,
+                polygon: pickUpPoint.address.location, // Assign location to polygon
+              },
+            };
+          }
+          return pickUpPoint;
+        },
+      );
+
+      return transformedPickUpPoints;
     } catch (error) {
       throw error;
     }

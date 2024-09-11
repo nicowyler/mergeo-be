@@ -1,4 +1,4 @@
-import { DateAudit } from 'src/common/entities/base.entity';
+import { DateAudit } from '../../common/entities/base.entity';
 import { User } from '../../modules/user/user.entity';
 import { Permission } from './permission.entity';
 import {

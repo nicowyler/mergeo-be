@@ -12,3 +12,17 @@ export function convertCoordinatesForPostGIS(coordinates: number[]): Point {
     coordinates: [coordinates[1], coordinates[0]] as [number, number], // Ensure it's a tuple
   };
 }
+
+export function transformPolygonToLocation(value: any): any {
+  if (value && value.polygon) {
+    return { ...value, location: value.polygon };
+  }
+  return value;
+}
+
+export function transformLocationToPolygon(value: any): any {
+  if (value && value.location) {
+    return { ...value, polygon: value.location };
+  }
+  return value;
+}

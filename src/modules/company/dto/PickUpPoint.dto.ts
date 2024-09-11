@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import {
   IsArray,
   IsEmail,
@@ -8,6 +9,10 @@ import {
   IsOptional,
   IsString,
 } from 'class-validator';
+import {
+  transformLocationToPolygon,
+  transformPolygonToLocation,
+} from 'src/common/utils/postGis.utils';
 import { Address } from 'src/modules/company/address.entity';
 import { PickUpSchedule } from 'src/modules/company/pickUpPoints/pickUpSchedule.entity';
 
@@ -28,6 +33,12 @@ export class PickUpPointDto {
   @ApiProperty()
   @IsNotEmpty()
   @IsObject()
+  @Transform(({ value }) => transformPolygonToLocation(value), {
+    toClassOnly: true,
+  })
+  @Transform(({ value }) => transformLocationToPolygon(value), {
+    toPlainOnly: true,
+  })
   address: Address;
 
   @ApiProperty()
@@ -54,9 +65,16 @@ export class UpdatePickUpPoint {
   phoneNumber?: string;
 
   @ApiProperty()
-  @IsOptional()
+  @IsNotEmpty()
   @IsObject()
-  address?: Address;
+  @IsOptional()
+  @Transform(({ value }) => transformPolygonToLocation(value), {
+    toClassOnly: true,
+  })
+  @Transform(({ value }) => transformLocationToPolygon(value), {
+    toPlainOnly: true,
+  })
+  address: Address;
 
   @ApiProperty()
   @IsOptional()

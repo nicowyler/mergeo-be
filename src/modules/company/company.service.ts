@@ -35,12 +35,12 @@ export class CompanyService {
   async createCompany(body: CreateCompanyDto) {
     console.log(body);
     try {
-      const coordinatesArray: number[] = body.address.polygon.coordinates;
+      const coordinatesArray: number[] = body.address.location.coordinates;
 
       const newAddress = new Address();
       newAddress.locationId = body.address.id;
       newAddress.name = body.address.name;
-      newAddress.polygon = convertCoordinatesForPostGIS(coordinatesArray);
+      newAddress.location = convertCoordinatesForPostGIS(coordinatesArray);
 
       const newCompany = new Company();
       newCompany.name = body.name;
@@ -143,17 +143,17 @@ export class CompanyService {
       newCompany.activity = body.activity;
 
       if (body.address) {
-        const { id: locationId, polygon, ...addressData } = body.address;
+        const { id: locationId, location, ...addressData } = body.address;
 
         // Convert coordinates to PostGIS format
-        const postGISPolygon = polygon
-          ? convertCoordinatesForPostGIS(polygon.coordinates)
+        const postGISPolygon = location
+          ? convertCoordinatesForPostGIS(location.coordinates)
           : undefined;
 
         // Update the address data
         const updatedAddressData = {
           ...addressData,
-          polygon: postGISPolygon,
+          location: postGISPolygon,
         };
 
         // Check if an address with the given locationId exists
@@ -214,8 +214,8 @@ export class CompanyService {
       const address = new Address();
       address.locationId = createBranchDto.address.id;
       address.name = createBranchDto.address.name;
-      address.polygon = convertCoordinatesForPostGIS(
-        createBranchDto.address.polygon.coordinates,
+      address.location = convertCoordinatesForPostGIS(
+        createBranchDto.address.location.coordinates,
       );
 
       const savedAddress = await this.addressRepository.save(address);
@@ -265,11 +265,11 @@ export class CompanyService {
       branch.phoneNumber = body.phoneNumber ?? branch.phoneNumber;
 
       if (body.address) {
-        const { id: locationId, polygon, ...addressData } = body.address;
+        const { id: locationId, location, ...addressData } = body.address;
 
         // Convert coordinates to PostGIS format
-        const postGISPolygon = polygon
-          ? convertCoordinatesForPostGIS(polygon.coordinates)
+        const postGISPolygon = location
+          ? convertCoordinatesForPostGIS(location.coordinates)
           : undefined;
 
         // Update the address data

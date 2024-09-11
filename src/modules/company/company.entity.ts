@@ -12,6 +12,7 @@ import { Branch } from '../../modules/company/branch.entity';
 import { User } from '../../modules/user/user.entity';
 import { Address } from '../../modules/company/address.entity';
 import { PickUpPoint } from 'src/modules/company/pickUpPoints/pickUpPoint.entity';
+import { DropZone } from 'src/modules/company/dropZones/dropZone.entity';
 
 @Entity()
 @Unique('UQ_BUSINESS_NAME', ['razonSocial'])
@@ -46,4 +47,9 @@ export class Company extends DateAudit {
     cascade: true,
   })
   pickUpPoints: PickUpPoint[];
+
+  @OneToMany(() => DropZone, (dropZone) => dropZone.company, {
+    cascade: true,
+  })
+  dropZones: DropZone[];
 }

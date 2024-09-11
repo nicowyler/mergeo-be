@@ -16,9 +16,13 @@ import { Permission } from '../../modules/role/permission.entity';
 import { RoleService } from 'src/modules/role/role.service';
 import { PickUpPointController } from 'src/modules/company/pickUpPoints/pickUpPoint.controller';
 import { PickUpPointService } from 'src/modules/company/pickUpPoints/pickUpPoint.service';
-import { Address } from 'src/modules/company/address.entity';
+import { Address, ZoneAddress } from 'src/modules/company/address.entity';
 import { PickUpPoint } from 'src/modules/company/pickUpPoints/pickUpPoint.entity';
 import { PickUpSchedule } from 'src/modules/company/pickUpPoints/pickUpSchedule.entity';
+import { DropZoneSchedule } from 'src/modules/company/dropZones/dropZoneSchedule.entity';
+import { DropZone } from 'src/modules/company/dropZones/dropZone.entity';
+import { DropZoneController } from 'src/modules/company/dropZones/dropZone.controller';
+import { DropZoneService } from 'src/modules/company/dropZones/dropZone.service';
 
 @Module({
   imports: [
@@ -31,14 +35,18 @@ import { PickUpSchedule } from 'src/modules/company/pickUpPoints/pickUpSchedule.
       Address,
       PickUpPoint,
       PickUpSchedule,
+      DropZone,
+      ZoneAddress,
+      DropZoneSchedule,
     ]),
     TypedEventEmitterModule,
     PassportModule,
   ],
-  controllers: [CompanyController, PickUpPointController],
+  controllers: [CompanyController, PickUpPointController, DropZoneController],
   providers: [
     CompanyService,
     PickUpPointService,
+    DropZoneService,
     UserService,
     RoleService,
     EncoderService,
