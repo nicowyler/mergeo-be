@@ -7,7 +7,6 @@ import {
   IsString,
   IsUUID,
 } from 'class-validator';
-import { transformPolygonToLocation } from 'src/common/utils/postGis.utils';
 import { Address } from 'src/modules/company/address.entity';
 
 export class CreateCompanyDto {
@@ -50,10 +49,7 @@ export class UpdateCompanyDto {
 
   @ApiProperty()
   @IsOptional()
-  @Transform(({ value }) => transformPolygonToLocation(value), {
-    toClassOnly: true,
-  })
-  address?: Address;
+  address: Address;
 
   @ApiProperty()
   @IsOptional()

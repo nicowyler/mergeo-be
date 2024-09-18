@@ -31,25 +31,3 @@ export class Address {
   @OneToOne(() => Branch, (branch) => branch.address)
   branch: Branch;
 }
-
-@Entity()
-@Index('idx_zone_polygon', ['polygon'], { spatial: true })
-export class ZoneAddress {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
-
-  @Column()
-  locationId: string;
-
-  @Column()
-  name: string;
-
-  @Column('geometry', { spatialFeatureType: 'Polygon', srid: 4326 })
-  polygon: Polygon;
-
-  @OneToOne(() => Company, (company) => company.address)
-  company: Company;
-
-  @OneToOne(() => Branch, (branch) => branch.address)
-  branch: Branch;
-}

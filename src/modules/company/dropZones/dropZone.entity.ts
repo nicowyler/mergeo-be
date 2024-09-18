@@ -4,12 +4,11 @@ import {
   PrimaryGeneratedColumn,
   ManyToOne,
   Unique,
-  OneToOne,
   JoinColumn,
   OneToMany,
+  Polygon,
 } from 'typeorm';
 import { Company } from '../company.entity';
-import { Address, ZoneAddress } from 'src/modules/company/address.entity';
 import { DropZoneSchedule } from 'src/modules/company/dropZones/dropZoneSchedule.entity';
 
 @Entity()
@@ -21,9 +20,8 @@ export class DropZone {
   @Column()
   name: string;
 
-  @OneToOne(() => Address, { nullable: true }) // Ensure this is a ManyToOne or OneToOne as needed
-  @JoinColumn({ name: 'addressId' })
-  address: ZoneAddress;
+  @Column('geometry', { spatialFeatureType: 'Polygon', srid: 4326 })
+  zone: Polygon;
 
   @ManyToOne(() => Company, (company) => company.dropZones)
   @JoinColumn({ name: 'companyId' })

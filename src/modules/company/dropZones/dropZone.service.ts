@@ -8,7 +8,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Company } from '../company.entity';
 import { ErrorMessages } from '../../../common/enum/errorMessages.enum';
 import { UUID } from 'crypto';
-import { ZoneAddress } from 'src/modules/company/address.entity';
 import { DropZone } from 'src/modules/company/dropZones/dropZone.entity';
 import { DropZoneSchedule } from 'src/modules/company/dropZones/dropZoneSchedule.entity';
 import {
@@ -23,8 +22,6 @@ export class DropZoneService {
     private readonly dropZoneRepository: Repository<DropZone>,
     @InjectRepository(Company)
     private readonly companyRepository: Repository<Company>,
-    @InjectRepository(ZoneAddress)
-    private readonly addressRepository: Repository<ZoneAddress>,
     @InjectRepository(DropZoneSchedule)
     private readonly dropZoneScheduleRepository: Repository<DropZoneSchedule>,
   ) {}
@@ -36,7 +33,7 @@ export class DropZoneService {
     try {
       const company = await this.companyRepository.findOne({
         where: { id: companyId },
-        relations: ['dropZones'], // Include branches in the query
+        relations: ['dropZones'],
       });
 
       if (!company) {
@@ -45,42 +42,36 @@ export class DropZoneService {
         );
       }
 
-      const address = new ZoneAddress();
-      address.locationId = dropZoneDto.address.id;
-      address.name = dropZoneDto.address.name;
-      address.polygon = dropZoneDto.address.polygon;
+      // Ensure the zone is valid GeoJSON
+      const dropzone = new DropZone();
+      dropzone.name = dropZoneDto.name;
+      dropzone.company = company;
+      dropzone.zone = dropZoneDto.zone;
+
+      const savedDropZone = await this.dropZoneRepository.save(dropzone);
 
       let schedules = [];
-      if (dropZoneDto.schedules.length) {
+      if (dropZoneDto.schedules && dropZoneDto.schedules.length) {
         schedules = dropZoneDto.schedules.map((scheduleDto) => {
           const schedule = new DropZoneSchedule();
           schedule.day = scheduleDto.day;
           schedule.startHour = scheduleDto.startHour;
           schedule.endHour = scheduleDto.endHour;
+          schedule.dropZone = savedDropZone;
           return schedule;
         });
+        await this.dropZoneScheduleRepository.save(schedules);
       }
 
-      const savedAddress = await this.addressRepository.save(address);
-      const dropZone = new DropZone();
-      dropZone.name = dropZoneDto.name;
-      dropZone.company = company;
-      dropZone.address = savedAddress;
-      dropZone.schedules = schedules;
-
-      const savedDropZone = await this.dropZoneRepository.save(dropZone);
-
-      const dropZoneWithoutCompany = {
+      return {
         id: savedDropZone.id,
         name: savedDropZone.name,
-        address: savedDropZone.address,
-        schedules: savedDropZone.schedules,
+        zone: savedDropZone.zone,
+        schedules: schedules,
       };
-
-      return dropZoneWithoutCompany;
     } catch (error) {
       if (error.code === '23505') {
-        throw new ConflictException(ErrorMessages.PICK_UP_POINT_NAME_TAKEN);
+        throw new ConflictException(ErrorMessages.PDROP_ZONE_NAME_TAKEN);
       } else {
         throw error;
       }
@@ -92,12 +83,12 @@ export class DropZoneService {
       // Find the branch and its related address
       const dropZone = await this.dropZoneRepository.findOne({
         where: { id },
-        relations: ['address', 'schedules'],
+        relations: ['schedules'],
       });
 
       if (!dropZone) {
         throw new NotFoundException(
-          `${ErrorMessages.PICK_UP_POINT_NOT_FOUND} ${id}`,
+          `${ErrorMessages.DROP_ZONE_NOT_FOUND} ${id}`,
         );
       }
 
@@ -137,36 +128,8 @@ export class DropZoneService {
       // Update the schedules
       dropZone.schedules = updatedSchedules;
 
-      if (body.address) {
-        const { id: locationId, polygon, ...addressData } = body.address;
-
-        // Convert coordinates to PostGIS format
-        const postGISPolygon = polygon;
-        // Update the address data
-        const updatedAddressData = {
-          ...addressData,
-          location: postGISPolygon,
-        };
-
-        // Check if an address with the given locationId exists
-        let address = await this.addressRepository.findOne({
-          where: { locationId },
-        });
-
-        if (address) {
-          // Update existing address
-          address = { ...address, ...updatedAddressData };
-          address = await this.addressRepository.save(address);
-        } else {
-          // Create a new address if it does not exist
-          address = await this.addressRepository.save({
-            locationId,
-            ...updatedAddressData,
-          });
-        }
-
-        // Link the address to the branch
-        dropZone.address = address;
+      if (body.zone) {
+        dropZone.zone = body.zone;
       }
 
       // Save the updated branch
@@ -174,7 +137,9 @@ export class DropZoneService {
       return updatedDropZone;
     } catch (error) {
       if (error.code === '23502') {
-        throw new NotFoundException(`${ErrorMessages.BRANCH_NOT_FOUND} ${id}`);
+        throw new NotFoundException(
+          `${ErrorMessages.DROP_ZONE_NOT_FOUND} ${id}`,
+        );
       } else {
         throw error;
       }
@@ -185,7 +150,7 @@ export class DropZoneService {
     try {
       const company = await this.companyRepository.findOne({
         where: { id: companyId },
-        relations: ['dropZones', 'dropZones.address', 'dropZones.schedules'], // Load related branches and addresses
+        relations: ['dropZones', 'dropZones.schedules'], // Load related branches and addresses
       });
 
       if (!company) {
@@ -202,10 +167,10 @@ export class DropZoneService {
     try {
       const dropZone = await this.dropZoneRepository.find({
         where: { id: id },
-        relations: ['address', 'schedules'], // Ensure address is included
+        relations: ['schedules'], // Ensure address is included
       });
       if (!dropZone) {
-        throw new NotFoundException(ErrorMessages.PICK_UP_POINT_NOT_FOUND);
+        throw new NotFoundException(ErrorMessages.DROP_ZONE_NOT_FOUND);
       }
 
       this.dropZoneRepository.remove(dropZone);

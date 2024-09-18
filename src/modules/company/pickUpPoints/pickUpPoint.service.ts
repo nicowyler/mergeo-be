@@ -190,7 +190,7 @@ export class PickUpPointService {
 
       const transformedPickUpPoint = {
         ...updatedPickUpPoint,
-        address: transformLocationToPolygon(updatedPickUpPoint.address), // Transform back
+        address: updatedPickUpPoint.address, // Transform back
       };
 
       return transformedPickUpPoint;
@@ -217,25 +217,7 @@ export class PickUpPointService {
       if (!company) {
         throw new NotFoundException(ErrorMessages.COMPANY_NOT_FOUND);
       }
-
-      // Transform each pickUpPoint's address by converting location to polygon
-      const transformedPickUpPoints = company.pickUpPoints.map(
-        (pickUpPoint) => {
-          if (pickUpPoint.address && pickUpPoint.address.location) {
-            // Map 'location' to 'polygon'
-            return {
-              ...pickUpPoint,
-              address: {
-                ...pickUpPoint.address,
-                polygon: pickUpPoint.address.location, // Assign location to polygon
-              },
-            };
-          }
-          return pickUpPoint;
-        },
-      );
-
-      return transformedPickUpPoints;
+      return company.pickUpPoints;
     } catch (error) {
       throw error;
     }

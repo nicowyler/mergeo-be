@@ -21,6 +21,10 @@ export enum ErrorMessages {
   PICK_UP_POINT_NOT_FOUND = 'No se encontro ningun punto de retiro con el id',
   PICK_UP_POINT_NAME_TAKEN = 'Ya existe un punto de retiro con ese nombre',
 
+  //DROP ZONE
+  DROP_ZONE_NOT_FOUND = 'No se encontro ninguna zona de entrega con el id',
+  PDROP_ZONE_NAME_TAKEN = 'Ya existe una zona de entrega con ese nombre',
+
   // COMPANY
   ROLE_NAME_TAKEN = 'El rol ya existe',
   ROLE_NOT_FOUND = 'No se encontro ningun rol con el id',

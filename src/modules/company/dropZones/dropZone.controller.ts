@@ -37,7 +37,7 @@ export class DropZoneController {
     return dropZone;
   }
 
-  // GET ALL PICK-UP POINTS FOR COMPANY
+  // GET ALL DROP ZONES FOR COMPANY
   @Get(':id/dropZone')
   @UseGuards(AuthGuard)
   @ResponseMessage('Drop zone encontrados con exito!')
@@ -59,7 +59,7 @@ export class DropZoneController {
 
   @Delete('/dropZone/:id')
   @UseGuards(AuthGuard)
-  @ResponseMessage('Drop zone Point borrado con exito!')
+  @ResponseMessage('Drop zone borrado con exito!')
   async delete(@Param('id') id: UUID): Promise<void> {
     await this.dropZoneService.delete(id);
     return;

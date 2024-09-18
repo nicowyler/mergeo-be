@@ -1,15 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Expose, Transform, Type } from 'class-transformer';
+import { Expose, Type } from 'class-transformer';
 import {
   IsEmail,
   IsMobilePhone,
   IsNotEmpty,
-  IsNumber,
   IsObject,
   IsOptional,
   IsString,
 } from 'class-validator';
-import { transformPolygonToLocation } from 'src/common/utils/postGis.utils';
 import { Address } from 'src/modules/company/address.entity';
 import { Branch } from 'src/modules/company/branch.entity';
 
@@ -30,9 +28,6 @@ export class CreateBranchDto {
   @ApiProperty()
   @IsNotEmpty()
   @IsObject()
-  @Transform(({ value }) => transformPolygonToLocation(value), {
-    toClassOnly: true,
-  })
   address: Address;
 }
 
@@ -69,9 +64,6 @@ export class CreateBranchResponseDto {
 
   @ApiProperty()
   @Expose()
-  @Transform(({ value }) => transformPolygonToLocation(value), {
-    toClassOnly: true,
-  })
   address: Address;
 }
 
@@ -96,9 +88,6 @@ export class UpdateBranchDto {
   @IsNotEmpty()
   @IsString()
   @IsOptional()
-  @Transform(({ value }) => transformPolygonToLocation(value), {
-    toClassOnly: true,
-  })
   address?: Address;
 }
 

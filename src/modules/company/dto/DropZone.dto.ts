@@ -1,5 +1,4 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
 import {
   IsArray,
   IsNotEmpty,
@@ -7,9 +6,8 @@ import {
   IsOptional,
   IsString,
 } from 'class-validator';
-import { transformPolygonToLocation } from 'src/common/utils/postGis.utils';
-import { ZoneAddress } from 'src/modules/company/address.entity';
 import { DropZoneSchedule } from 'src/modules/company/dropZones/dropZoneSchedule.entity';
+import { Polygon } from 'typeorm';
 
 export class DropZoneDto {
   @ApiProperty()
@@ -20,7 +18,7 @@ export class DropZoneDto {
   @ApiProperty()
   @IsNotEmpty()
   @IsObject()
-  address: ZoneAddress;
+  zone: Polygon;
 
   @ApiProperty()
   @IsNotEmpty()
@@ -39,7 +37,7 @@ export class UpdateDropZoneDto {
   @IsNotEmpty()
   @IsObject()
   @IsOptional()
-  address: ZoneAddress;
+  zone: Polygon;
 
   @ApiProperty()
   @IsOptional()

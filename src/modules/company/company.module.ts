@@ -16,7 +16,7 @@ import { Permission } from '../../modules/role/permission.entity';
 import { RoleService } from 'src/modules/role/role.service';
 import { PickUpPointController } from 'src/modules/company/pickUpPoints/pickUpPoint.controller';
 import { PickUpPointService } from 'src/modules/company/pickUpPoints/pickUpPoint.service';
-import { Address, ZoneAddress } from 'src/modules/company/address.entity';
+import { Address } from 'src/modules/company/address.entity';
 import { PickUpPoint } from 'src/modules/company/pickUpPoints/pickUpPoint.entity';
 import { PickUpSchedule } from 'src/modules/company/pickUpPoints/pickUpSchedule.entity';
 import { DropZoneSchedule } from 'src/modules/company/dropZones/dropZoneSchedule.entity';
@@ -36,7 +36,6 @@ import { DropZoneService } from 'src/modules/company/dropZones/dropZone.service'
       PickUpPoint,
       PickUpSchedule,
       DropZone,
-      ZoneAddress,
       DropZoneSchedule,
     ]),
     TypedEventEmitterModule,
