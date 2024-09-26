@@ -99,9 +99,7 @@ export class SearchListController {
     fs.unlinkSync(file.path);
 
     // Add products to the list
-    for (const productDto of products) {
-      await this.searchListService.addProductToList(listId, productDto);
-    }
+    await this.searchListService.addProductToList(listId, products);
   }
 
   // PRODDUCTS
@@ -109,8 +107,8 @@ export class SearchListController {
   @ResponseMessage('El producto se agrego con exito!')
   async addProductToList(
     @Param('listId') listId: UUID,
-    @Body() createProductDto: CreateProductDto,
-  ): Promise<SearchListProduct> {
+    @Body() createProductDto: CreateProductDto[],
+  ): Promise<CreateProductDto[]> {
     return this.searchListService.addProductToList(listId, createProductDto);
   }
 

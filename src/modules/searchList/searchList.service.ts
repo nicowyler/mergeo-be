@@ -181,8 +181,8 @@ export class SearchListService {
   // Add a product to a search list
   async addProductToList(
     listId: UUID,
-    createProductDto: CreateProductDto,
-  ): Promise<SearchListProduct> {
+    createProductDto: CreateProductDto[],
+  ): Promise<SearchListProduct[]> {
     const searchList = await this.searchListRepository.findOne({
       where: { id: listId },
       relations: ['products'],
@@ -192,24 +192,31 @@ export class SearchListService {
       throw new NotFoundException(`Search list with ID ${listId} not found`);
     }
 
-    // Check if the product already exists
-    let product = await this.searchListProductRepository.findOne({
-      where: { name: createProductDto.name },
-    });
+    const addedProducts: SearchListProduct[] = [];
 
-    if (!product) {
-      // If the product doesn't exist, create it
-      product = this.searchListProductRepository.create(createProductDto);
-      await this.searchListProductRepository.save(product);
+    for (const dto of createProductDto) {
+      // Check if the product already exists
+      let product = await this.searchListProductRepository.findOne({
+        where: { name: dto.name },
+      });
+
+      if (!product) {
+        // If the product doesn't exist, create it
+        product = this.searchListProductRepository.create(dto);
+        await this.searchListProductRepository.save(product);
+      }
+
+      // Add the product to the list if it's not already present
+      if (!searchList.products.some((p) => p.id === product.id)) {
+        searchList.products.push(product);
+        addedProducts.push(product);
+      }
     }
 
-    // Add the product to the list if it's not already present
-    if (!searchList.products.some((p) => p.id === product.id)) {
-      searchList.products.push(product);
-      await this.searchListRepository.save(searchList);
-    }
+    // Save the updated search list
+    await this.searchListRepository.save(searchList);
 
-    return product;
+    return addedProducts; // Return the array of added products
   }
 
   // Update a product in a search list
