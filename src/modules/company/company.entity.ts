@@ -27,7 +27,7 @@ export class Company extends DateAudit {
   @Column()
   razonSocial: string;
 
-  @Column()
+  @Column({ type: 'bigint' })
   cuit: number;
 
   @OneToOne(() => Address, (address) => address.company, { cascade: true })

@@ -95,9 +95,7 @@ export class CompanyService {
           'users.accountType',
           'branches.id',
           'branches.name',
-          'address.id',
-          'address.name',
-          'address.polygon',
+          'address',
         ])
         .where('company.id = :id', { id: companyId })
         .getOne();

@@ -49,10 +49,22 @@ export class RoleService {
 
   async createAdminRole(companyId: string, user: User) {
     const permissions = await this.permissionRepository.find();
-    const adminRole = await this.roleRepository.findOne({
-      where: { name: 'Admin', companyId: companyId },
+    let adminRole = await this.roleRepository.findOne({
+      where: { name: 'Admin' }, // ensure we are checking roles by companyId too
+      relations: ['users'], // load users along with the role
     });
-    if (adminRole) return adminRole;
+
+    // If the "Admin" role exists, add the user if they are not already assigned
+    if (adminRole) {
+      const isUserAssigned = adminRole.users.some((u) => u.id === user.id);
+      if (!isUserAssigned) {
+        adminRole.users.push(user); // add the user to the existing role
+        adminRole = await this.roleRepository.save(adminRole); // save updated role with user
+      }
+      return adminRole;
+    }
+
+    // If the "Admin" role doesn't exist, create a new one
     return this.createRole(companyId, user, {
       name: 'Admin',
       permissions: permissions,
