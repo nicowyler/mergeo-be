@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose, Type } from 'class-transformer';
 import {
+  IsBoolean,
   IsEmail,
   IsMobilePhone,
   IsNotEmpty,
@@ -19,11 +20,15 @@ export class CreateBranchDto {
 
   @ApiProperty()
   @IsEmail()
-  email: string;
+  email?: string;
 
   @ApiProperty()
   @IsMobilePhone('es-AR', { strictMode: false })
-  phoneNumber: string;
+  phoneNumber?: string;
+
+  @ApiProperty()
+  @IsBoolean()
+  isMain?: boolean;
 
   @ApiProperty()
   @IsNotEmpty()
@@ -56,11 +61,11 @@ export class CreateBranchResponseDto {
 
   @ApiProperty()
   @Expose()
-  email: string;
+  email?: string;
 
   @ApiProperty()
   @Expose()
-  phoneNumber: string;
+  phoneNumber?: string;
 
   @ApiProperty()
   @Expose()

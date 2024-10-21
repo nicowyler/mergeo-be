@@ -35,9 +35,14 @@ export class CompanyController {
   @Post()
   @UseGuards(AuthGuard)
   @ResponseMessage('Compania creada con exito!')
-  async createCompany(@Body() body: CreateCompanyDto): Promise<Company> {
+  async createCompany(
+    @Body() body: CreateCompanyDto,
+  ): Promise<{ company: Company; branch: Omit<Branch, 'company'> }> {
     const company = await this.companyService.createCompany(body);
-    return company;
+    return {
+      company: company.company,
+      branch: company.branch,
+    };
   }
 
   @Get(':id')

@@ -4,15 +4,13 @@ import {
   PrimaryGeneratedColumn,
   OneToMany,
   Unique,
-  OneToOne,
-  JoinColumn,
 } from 'typeorm';
 import { DateAudit } from '../../common/entities/base.entity';
 import { Branch } from '../../modules/company/branch.entity';
 import { User } from '../../modules/user/user.entity';
-import { Address } from '../../modules/company/address.entity';
 import { PickUpPoint } from 'src/modules/company/pickUpPoints/pickUpPoint.entity';
 import { DropZone } from 'src/modules/company/dropZones/dropZone.entity';
+import { Product } from 'src/modules/product/entities/product.entity';
 
 @Entity()
 @Unique('UQ_BUSINESS_NAME', ['razonSocial'])
@@ -29,10 +27,6 @@ export class Company extends DateAudit {
 
   @Column({ type: 'bigint' })
   cuit: number;
-
-  @OneToOne(() => Address, (address) => address.company, { cascade: true })
-  @JoinColumn({ name: 'addressId' })
-  address: Address;
 
   @Column()
   activity: string;
@@ -52,4 +46,7 @@ export class Company extends DateAudit {
     cascade: true,
   })
   dropZones: DropZone[];
+
+  @OneToMany(() => Product, (product) => product.company)
+  products: Product[];
 }

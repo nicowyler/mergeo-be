@@ -1,5 +1,11 @@
 import { DropZone } from 'src/modules/company/dropZones/dropZone.entity';
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  Index,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 
 @Entity()
 export class DropZoneSchedule {
@@ -9,11 +15,13 @@ export class DropZoneSchedule {
   @Column()
   day: string;
 
+  @Index('idx_start_hour')
   @Column()
-  startHour: string;
+  startHour: number;
 
+  @Index('idx_end_hour')
   @Column()
-  endHour: string;
+  endHour: number;
 
   @ManyToOne(() => DropZone, (dropZone) => dropZone.schedules, {
     onDelete: 'CASCADE',

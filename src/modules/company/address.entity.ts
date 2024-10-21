@@ -6,7 +6,6 @@ import {
   Index,
   OneToOne,
   Point,
-  Polygon,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
@@ -24,9 +23,6 @@ export class Address {
 
   @Column('geometry', { spatialFeatureType: 'Point', srid: 4326 })
   location: Point;
-
-  @OneToOne(() => Company, (company) => company.address)
-  company: Company;
 
   @OneToOne(() => Branch, (branch) => branch.address)
   branch: Branch;

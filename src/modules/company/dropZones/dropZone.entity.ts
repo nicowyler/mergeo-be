@@ -7,12 +7,14 @@ import {
   JoinColumn,
   OneToMany,
   Polygon,
+  Index,
 } from 'typeorm';
 import { Company } from '../company.entity';
 import { DropZoneSchedule } from 'src/modules/company/dropZones/dropZoneSchedule.entity';
 
 @Entity()
-@Unique('UQ_DZ_NAME', ['name'])
+@Unique('UQ_DZ_NAME', ['name', 'company']) // Composite unique constraint for name and company
+@Index('idx_dropzone_zone', ['zone'], { spatial: true })
 export class DropZone {
   @PrimaryGeneratedColumn('uuid')
   id: string;

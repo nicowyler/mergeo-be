@@ -75,9 +75,7 @@ export class AuthController {
   @Post('/register/company')
   async registerCompany(@Body() regiserCompanyDto: RegisterCompanyDto) {
     const response = await this.authService.registerCompany(regiserCompanyDto);
-    return {
-      companyId: response.id,
-    };
+    return { companyId: response.company.id };
   }
 
   @ResponseMessage('Usuaurio Agregado!')

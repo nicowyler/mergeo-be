@@ -1,5 +1,4 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
 import {
   IsNotEmpty,
   IsNumber,
@@ -7,7 +6,7 @@ import {
   IsString,
   IsUUID,
 } from 'class-validator';
-import { Address } from 'src/modules/company/address.entity';
+import { Branch } from 'src/modules/company/branch.entity';
 
 export class CreateCompanyDto {
   @ApiProperty()
@@ -23,11 +22,11 @@ export class CreateCompanyDto {
   @ApiProperty()
   @IsNotEmpty()
   @IsNumber()
-  cuit?: number;
+  cuit: number;
 
   @ApiProperty()
   @IsNotEmpty()
-  address: Address;
+  branch: Branch;
 
   @ApiProperty()
   @IsNotEmpty()
@@ -42,17 +41,14 @@ export class GetCompanyDto {
 }
 
 export class UpdateCompanyDto {
-  @ApiProperty()
-  @IsOptional()
   @IsString()
-  name?: string;
-
-  @ApiProperty()
   @IsOptional()
-  address: Address;
+  name: string;
 
-  @ApiProperty()
-  @IsOptional()
   @IsString()
-  activity?: string;
+  @IsOptional()
+  activity: string;
+
+  @IsOptional()
+  branch?: Branch;
 }

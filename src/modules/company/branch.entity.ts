@@ -11,7 +11,7 @@ import { Company } from './company.entity';
 import { Address } from 'src/modules/company/address.entity';
 
 @Entity()
-@Unique('UQ_NAME', ['name'])
+@Unique('UQ_NAME', ['name', 'company'])
 export class Branch {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -19,13 +19,16 @@ export class Branch {
   @Column()
   name: string;
 
-  @Column()
-  email: string;
+  @Column({ nullable: true })
+  email?: string;
 
-  @Column()
-  phoneNumber: string;
+  @Column({ default: false, nullable: true })
+  isMain?: boolean;
 
-  @OneToOne(() => Address, { nullable: true }) // Ensure this is a ManyToOne or OneToOne as needed
+  @Column({ nullable: true })
+  phoneNumber?: string;
+
+  @OneToOne(() => Address, { nullable: true, cascade: true }) // Ensure this is a ManyToOne or OneToOne as needed
   @JoinColumn({ name: 'addressId' })
   address: Address;
 

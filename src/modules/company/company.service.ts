@@ -35,22 +35,31 @@ export class CompanyService {
   async createCompany(body: CreateCompanyDto) {
     console.log(body);
     try {
-      const coordinatesArray: number[] = body.address.location.coordinates;
-
-      const newAddress = new Address();
-      newAddress.locationId = body.address.id;
-      newAddress.name = body.address.name;
-      newAddress.location = convertCoordinatesForPostGIS(coordinatesArray);
-
+      // Create the new Company entity
       const newCompany = new Company();
       newCompany.name = body.name;
       newCompany.razonSocial = body.razonSocial;
       newCompany.cuit = body.cuit;
-      newCompany.address = newAddress;
       newCompany.activity = body.activity;
 
-      const result = await this.companyRepository.save(newCompany);
-      return result;
+      // Save the company first
+      const savedCompany = await this.companyRepository.save(newCompany);
+
+      // After the company is saved, create the branch using createBranch method
+      const branch = new Branch();
+      branch.name = body.branch.name || 'Principal';
+      branch.email = body.branch.email ?? '';
+      branch.phoneNumber = body.branch.phoneNumber ?? '';
+      branch.isMain = true;
+      branch.address = body.branch.address;
+
+      // Create the branch associated with the company
+      const createdBranch = await this.createBranch(savedCompany.id, branch);
+
+      return {
+        company: savedCompany,
+        branch: createdBranch,
+      };
     } catch (error) {
       console.log(error);
       if (error.code === '23505') {
@@ -81,11 +90,12 @@ export class CompanyService {
           `${ErrorMessages.COMPANY_NOT_FOUND} ${companyId}`,
         );
       }
+
       const company = await this.companyRepository
         .createQueryBuilder('company')
-        .leftJoinAndSelect('company.users', 'users')
+        .leftJoinAndSelect('company.users', 'users') // Assuming users is a relation
         .leftJoinAndSelect('company.branches', 'branches')
-        .leftJoinAndSelect('company.address', 'address')
+        .leftJoinAndSelect('branches.address', 'address') // Correctly joining address through branches
         .select([
           'company',
           'users.id',
@@ -95,7 +105,9 @@ export class CompanyService {
           'users.accountType',
           'branches.id',
           'branches.name',
-          'address',
+          'address.id', // Select address id or other relevant fields as needed
+          'address.name', // Add other fields from Address you want to select
+          'address.location', // Include the location field if necessary
         ])
         .where('company.id = :id', { id: companyId })
         .getOne();
@@ -107,28 +119,45 @@ export class CompanyService {
   }
 
   async getCompanyByUserId(user: User): Promise<Company> {
-    const company = await this.companyRepository
-      .createQueryBuilder('company')
-      .leftJoinAndSelect('company.users', 'users')
-      .select(['company', 'users.id'])
-      .where('company.id = :id', { id: user.company.id })
-      .getOne();
+    try {
+      const company = await this.companyRepository
+        .createQueryBuilder('company')
+        .leftJoinAndSelect('company.users', 'users')
+        .leftJoinAndSelect('company.branches', 'branches') // Join branches
+        .leftJoinAndSelect('branches.address', 'address') // Join address through branches
+        .select([
+          'company',
+          'users.id',
+          'users.firstName', // Include additional user fields as necessary
+          'users.lastName',
+          'users.email',
+          'branches.id',
+          'branches.name',
+          'address.id',
+          'address.name',
+          'address.location',
+        ])
+        .where('company.id = :id', { id: user.company.id })
+        .getOne();
 
-    if (!company) {
-      throw new NotFoundException(
-        `${ErrorMessages.COMPANY_NOT_FOUND} for user ${user.id}`,
-      );
+      if (!company) {
+        throw new NotFoundException(
+          `${ErrorMessages.COMPANY_NOT_FOUND} for user ${user.id}`,
+        );
+      }
+
+      return company;
+    } catch (error) {
+      throw new InternalServerErrorException(error);
     }
-
-    return company;
   }
 
   async updateCompany(id: UUID, body: UpdateCompanyDto) {
     try {
-      // Find the branch and its related address
+      // Find the company along with its branches (including the address in each branch)
       const company = await this.companyRepository.findOne({
         where: { id },
-        relations: ['address'], // Load the related address
+        relations: ['branches', 'branches.address'], // Load branches and related address
       });
 
       if (!company) {
@@ -136,55 +165,78 @@ export class CompanyService {
       }
 
       // Update company properties
-      const newCompany = new Company();
-      newCompany.name = body.name;
-      newCompany.activity = body.activity;
+      company.name = body.name;
+      company.activity = body.activity;
 
-      if (body.address) {
-        const { id: locationId, location, ...addressData } = body.address;
+      if (body.branch) {
+        const { id: branchId, name, email, phoneNumber, address } = body.branch;
 
-        // Convert coordinates to PostGIS format
-        const postGISPolygon = location
-          ? convertCoordinatesForPostGIS(location.coordinates)
-          : undefined;
+        // Check if the branch exists, or create a new one
+        let branch = company.branches.find((b) => b.id === branchId);
 
-        // Update the address data
-        const updatedAddressData = {
-          ...addressData,
-          location: postGISPolygon,
-        };
-
-        // Check if an address with the given locationId exists
-        let address = await this.addressRepository.findOne({
-          where: { locationId },
-        });
-
-        if (address) {
-          // Update existing address
-          address = { ...address, ...updatedAddressData };
-          address = await this.addressRepository.save(address);
-        } else {
-          // Create a new address if it does not exist
-          address = await this.addressRepository.save({
-            locationId,
-            ...updatedAddressData,
-          });
+        if (!branch) {
+          // Create new branch if it doesn't exist
+          branch = new Branch();
+          branch.company = company; // Link branch to company
         }
 
-        // Link the address to the company
-        newCompany.address = address;
+        // Update branch details
+        if (name) branch.name = name;
+        if (email) branch.email = email;
+        if (phoneNumber) branch.phoneNumber = phoneNumber;
+
+        if (address) {
+          const { id: locationId, location, ...addressData } = address;
+
+          // Convert coordinates to PostGIS format
+          const postGISPolygon = location
+            ? convertCoordinatesForPostGIS(location.coordinates)
+            : undefined;
+
+          const updatedAddressData = {
+            ...addressData,
+            location: postGISPolygon,
+          };
+
+          // Check if an address with the given locationId exists
+          let branchAddress = await this.addressRepository.findOne({
+            where: { locationId },
+          });
+
+          if (branchAddress) {
+            // Update existing address
+            branchAddress = { ...branchAddress, ...updatedAddressData };
+            branchAddress = await this.addressRepository.save(branchAddress);
+          } else {
+            // Create a new address if it does not exist
+            branchAddress = await this.addressRepository.save({
+              locationId,
+              ...updatedAddressData,
+            });
+          }
+
+          // Link the address to the branch
+          branch.address = branchAddress;
+        }
+
+        // Add or update the branch in the company’s branches
+        company.branches = company.branches.some((b) => b.id === branch.id)
+          ? company.branches.map((b) => (b.id === branch.id ? branch : b))
+          : [...company.branches, branch];
       }
 
-      // Save the updated company
-      await this.companyRepository.update(id, newCompany);
+      // Save the updated company (cascades to branch and address)
+      await this.companyRepository.save(company);
 
+      // Return the updated company with its branches and addresses
       const updatedCompany = await this.companyRepository.findOne({
         where: { id },
-        relations: ['address'], // Load the related address
+        relations: ['branches', 'branches.address'], // Load branches with addresses
       });
 
       return updatedCompany;
     } catch (error) {
+      console.log(error);
       if (error.code === '23502') {
         throw new NotFoundException(`${ErrorMessages.BRANCH_NOT_FOUND} ${id}`);
       } else {
@@ -221,6 +273,7 @@ export class CompanyService {
       branch.name = createBranchDto.name;
       branch.email = createBranchDto.email;
       branch.phoneNumber = createBranchDto.phoneNumber;
+      branch.isMain = createBranchDto.isMain;
       branch.company = company;
       branch.address = savedAddress;
 
@@ -229,7 +282,7 @@ export class CompanyService {
       const branchWithoutCompany = {
         id: savedBranch.id,
         name: savedBranch.name,
-        email: savedBranch.email,
+        email: savedBranch.email ?? '',
         phoneNumber: savedBranch.phoneNumber,
         address: savedBranch.address,
         // Add other properties if necessary
@@ -335,6 +388,7 @@ export class CompanyService {
             email: branch.email,
             phoneNumber: branch.phoneNumber,
             address: branch.address,
+            isMain: branch.isMain,
           })),
         },
       };

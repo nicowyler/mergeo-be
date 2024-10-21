@@ -10,10 +10,10 @@ export class PickUpSchedule {
   day: string;
 
   @Column()
-  startHour: string;
+  startHour: number;
 
   @Column()
-  endHour: string;
+  endHour: number;
 
   @ManyToOne(() => PickUpPoint, (pickUpPoint) => pickUpPoint.schedules, {
     onDelete: 'CASCADE',

@@ -200,14 +200,15 @@ export class UserService {
 
   async getUserByEmail(email: string): Promise<User> {
     const user = await this.userRepository.findOne({
-      where: { email: email },
-      relations: ['company', 'company.address'],
+      where: { email },
+      relations: ['company', 'company.branches', 'company.branches.address'], // Adjusted relations to include branches and their addresses
     });
 
-    if (!user)
+    if (!user) {
       throw new NotFoundException(`${ErrorMessages.USER_NOT_FOUND} ${email}`);
+    }
 
-    return user;
+    return user; // Return the found user
   }
 
   async editUser(id: string, body: UpdateUserDto): Promise<User> {
