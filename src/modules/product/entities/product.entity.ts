@@ -1,9 +1,12 @@
+import { UUID } from 'crypto';
 import { DateAudit } from 'src/common/entities/base.entity';
 import { Company } from 'src/modules/company/company.entity';
+import { PreOrderProduct } from 'src/modules/pre-order/entities/pre-order-product.entity';
 import {
   Column,
   Entity,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   Unique,
 } from 'typeorm';
@@ -12,7 +15,7 @@ import {
 @Unique('UQ_PRODUCT_NAME', ['name', 'price', 'brand', 'net_content', 'company'])
 export class Product extends DateAudit {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id: UUID;
 
   @Column({ nullable: false })
   name: string;
@@ -61,4 +64,10 @@ export class Product extends DateAudit {
 
   @ManyToOne(() => Company, (company) => company.products)
   company: Company;
+
+  @OneToMany(
+    () => PreOrderProduct,
+    (preOrderProduct) => preOrderProduct.product,
+  )
+  preOrderProducts: PreOrderProduct[];
 }

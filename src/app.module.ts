@@ -11,10 +11,18 @@ import { CompanyModule } from './modules/company/company.module';
 import { RoleModule } from './modules/role/role.module';
 import { SearchListModule } from 'src/modules/searchList/searchList.module';
 import { ProductModule } from './modules/product/product.module';
+import { PreOrderModule } from './modules/pre-order/pre-order.module';
+import { BullModule } from '@nestjs/bull';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    BullModule.forRoot({
+      redis: {
+        host: 'localhost', // Use your Redis host
+        port: 6379, // Use your Redis port
+      },
+    }),
     UserModule,
     RoleModule,
     CompanyModule,
@@ -25,6 +33,7 @@ import { ProductModule } from './modules/product/product.module';
     AuthModule,
     SearchListModule,
     ProductModule,
+    PreOrderModule,
   ],
 })
 export class AppModule {

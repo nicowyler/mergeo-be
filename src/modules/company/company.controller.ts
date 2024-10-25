@@ -48,7 +48,7 @@ export class CompanyController {
   @Get(':id')
   @UseGuards(AuthGuard)
   @ResponseMessage('Compania encontrada!')
-  async getCompany(@Param('id') id: string): Promise<Company> {
+  async getCompany(@Param('id') id: UUID): Promise<Company> {
     const company = await this.companyService.getCompanyById(id);
     return company;
   }

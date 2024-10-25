@@ -12,6 +12,7 @@ import {
 import { CreateCompanyDto } from 'src/modules/company/dto';
 import { ApiProperty } from '@nestjs/swagger';
 import { Roles } from 'src/modules/role/role.entity';
+import { UUID } from 'crypto';
 
 export class UserDto {
   @ApiProperty()
@@ -69,14 +70,14 @@ export class RefreshTokenDto {
 
 export class RegisterUserDto extends CreateUserDto {
   @IsUUID('4', { message: ErrorMessages.IS_UUID })
-  companyId: string;
+  companyId: UUID;
 }
 
 export class RegisterCompanyDto extends CreateCompanyDto {}
 
 export class AddUserDto {
   @IsUUID('4', { message: ErrorMessages.IS_UUID })
-  companyId: string;
+  companyId: UUID;
 
   @IsEmail()
   email: string;

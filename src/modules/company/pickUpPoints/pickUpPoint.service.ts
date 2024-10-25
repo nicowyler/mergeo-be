@@ -37,7 +37,7 @@ export class PickUpPointService {
   ): Promise<Omit<PickUpPoint, 'company'>> {
     try {
       const company = await this.companyRepository.findOne({
-        where: { id: companyId },
+        where: { id: companyId as UUID },
         relations: ['pickUpPoints'], // Include branches in the query
       });
 
@@ -206,7 +206,7 @@ export class PickUpPointService {
   async getPickUpPoints(companyId: string): Promise<PickUpPointDto[]> {
     try {
       const company = await this.companyRepository.findOne({
-        where: { id: companyId },
+        where: { id: companyId as UUID },
         relations: [
           'pickUpPoints',
           'pickUpPoints.address',

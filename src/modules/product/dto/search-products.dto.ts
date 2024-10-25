@@ -5,10 +5,9 @@ import {
   IsDate,
   IsNumber,
   IsBoolean,
-  ValidateNested,
-  IsObject,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
+import { UUID } from 'crypto';
 
 class PickUpAreaDto {
   @IsNumber()
@@ -23,7 +22,7 @@ class PickUpAreaDto {
 
 export class SearchProductsDto {
   @IsUUID()
-  branchId: string;
+  branchId: UUID;
 
   @IsOptional()
   @IsDate()
@@ -56,14 +55,6 @@ export class SearchProductsDto {
   @IsOptional()
   @IsString()
   baseMeasurementUnit?: string = 'grams';
-
-  @IsOptional()
-  @IsString()
-  nameFilter?: string;
-
-  @IsOptional()
-  @IsString()
-  brandFilter?: string;
 
   @IsOptional()
   @IsBoolean()

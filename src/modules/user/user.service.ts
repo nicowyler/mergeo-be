@@ -28,6 +28,7 @@ import { CompanyService } from 'src/modules/company/company.service';
 import { AddUserDto } from 'src/modules/auth/dto';
 import { passwordGen } from 'src/common/utils';
 import { Roles } from 'src/modules/role/role.entity';
+import { UUID } from 'crypto';
 
 @Injectable()
 export class UserService {
@@ -176,7 +177,7 @@ export class UserService {
   async getUsers(companyId: string): Promise<User[]> {
     try {
       const users = await this.userRepository.find({
-        where: { company: { id: companyId } },
+        where: { company: { id: companyId as UUID } },
         relations: ['roles', 'company', 'roles.permissions'],
       });
 

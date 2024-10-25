@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   postgis:
     image: postgis/postgis
@@ -10,3 +12,9 @@ services:
       POSTGRES_PASSWORD: postgres
     volumes:
       - ./data/postgis:/var/lib/postgresql/data
+
+  redis:
+    image: redis
+    restart: always
+    ports:
+      - 6379:6379

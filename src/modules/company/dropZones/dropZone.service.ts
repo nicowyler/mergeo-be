@@ -32,7 +32,7 @@ export class DropZoneService {
   ): Promise<Omit<DropZone, 'company'>> {
     try {
       const company = await this.companyRepository.findOne({
-        where: { id: companyId },
+        where: { id: companyId as UUID },
         relations: ['dropZones'],
       });
 
@@ -149,7 +149,7 @@ export class DropZoneService {
   async get(companyId: string): Promise<DropZoneDto[]> {
     try {
       const company = await this.companyRepository.findOne({
-        where: { id: companyId },
+        where: { id: companyId as UUID },
         relations: ['dropZones', 'dropZones.schedules'], // Load related branches and addresses
       });
 

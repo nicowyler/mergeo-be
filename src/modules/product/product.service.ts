@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { Product } from 'src/modules/product/entities/product.entity';
-import { Brackets, Repository } from 'typeorm';
+import { Brackets, In, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Branch } from 'src/modules/company/branch.entity';
 import { SearchProductsDto } from 'src/modules/product/dto/search-products.dto';
@@ -11,6 +11,7 @@ import {
   getConvertedPricePerUnit,
   getDateRangeForDays,
 } from 'src/modules/product/utils';
+import { UUID } from 'crypto';
 
 @Injectable()
 export class ProductService {
@@ -27,8 +28,8 @@ export class ProductService {
     return `This action returns all product`;
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} product`;
+  findById(id: UUID) {
+    return this.productRepository.findOne({ where: { id } });
   }
 
   update(id: number, updateProductDto: UpdateProductDto) {
@@ -39,10 +40,26 @@ export class ProductService {
     return `This action removes a #${id} product`;
   }
 
+  // Add the findByIds method
+  async findByIds(productIds: UUID[]): Promise<Product[]> {
+    if (!productIds || productIds.length === 0) {
+      return [];
+    }
+
+    // Use find with where clause to match multiple IDs
+    return await this.productRepository.find({
+      where: {
+        id: In(productIds),
+      },
+      relations: ['company'], // Include the company relation
+    });
+  }
+
   // Search function using the conversion logic
   async searchProducts(
-    companyId: string,
+    companyId: string, // this is the buyer's company id
     searchProductsDto: SearchProductsDto,
+    withCompany = false,
   ) {
     const {
       branchId,
@@ -66,11 +83,17 @@ export class ProductService {
         (1000 * 60 * 60 * 24),
     );
 
+    const query = this.productRepository.createQueryBuilder('product');
+
+    // Use either join or leftJoin based on the parameter
+    if (withCompany) {
+      query.leftJoinAndSelect('product.company', 'company'); // Inner join
+    } else {
+      query.leftJoin('product.company', 'company'); // Left join
+    }
     // Create the base query for products and companies
-    const query = this.productRepository
-      .createQueryBuilder('product')
+    query
       .distinctOn(['product.id', 'company.id'])
-      .leftJoin('product.company', 'company')
       .leftJoin('company.dropZones', 'dropZone')
       .leftJoin('dropZone.schedules', 'schedule')
       .leftJoin('dropZone.company', 'dropZoneCompany')
@@ -111,10 +134,15 @@ export class ProductService {
     // If pick-up is enabled, search in pickUpPoints as well
     let pickUpProducts = [];
     if (isPickUp) {
-      const pickUpQuery = this.productRepository
-        .createQueryBuilder('product')
+      const pickUpQuery = this.productRepository.createQueryBuilder('product');
+      // Use either join or leftJoin based on the parameter
+      if (withCompany) {
+        pickUpQuery.innerJoin('product.company', 'company'); // Inner join
+      } else {
+        pickUpQuery.leftJoin('product.company', 'company'); // Left join
+      }
+      pickUpQuery
         .distinctOn(['product.id', 'company.id'])
-        .leftJoin('product.company', 'company')
         .leftJoin('company.pickUpPoints', 'pickUpPoint')
         .leftJoin('pickUpPoint.schedules', 'pickUpSchedule')
         .where('company.id != :yourCompanyId', { yourCompanyId: companyId })

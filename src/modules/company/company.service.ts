@@ -80,7 +80,7 @@ export class CompanyService {
     }
   }
 
-  async getCompanyById(companyId: string) {
+  async getCompanyById(companyId: UUID) {
     try {
       const companyExists = await this.companyRepository.findOneBy({
         id: companyId,
@@ -251,7 +251,7 @@ export class CompanyService {
   ): Promise<Omit<Branch, 'company'>> {
     try {
       const company = await this.companyRepository.findOne({
-        where: { id: companyId },
+        where: { id: companyId as UUID },
         relations: ['branches'], // Include branches in the query
       });
 
@@ -365,7 +365,7 @@ export class CompanyService {
   async getBranches(companyId: string): Promise<BranchesResponseDto> {
     try {
       const company = await this.companyRepository.findOne({
-        where: { id: companyId },
+        where: { id: companyId as UUID },
         relations: ['branches', 'branches.address'], // Load related branches and addresses
       });
 
@@ -374,7 +374,7 @@ export class CompanyService {
       }
 
       const branches = await this.branchRepository.find({
-        where: { company: { id: companyId } },
+        where: { company: { id: companyId as UUID } },
         relations: ['address'], // Ensure address is included
       });
 
