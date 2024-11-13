@@ -1,21 +1,34 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Queue } from 'bull';
-import { InjectQueue } from '@nestjs/bull';
 import { PreOrder } from './entities/pre-order.entity';
 import { CartProductDto, CreatePreOrderDto } from './dto/create-pre-order.dto';
 import { Product } from 'src/modules/product/entities/product.entity';
 import { UUID } from 'crypto';
 import { Company } from 'src/modules/company/company.entity';
-import {
-  Instance,
-  ReplacementCriteria,
-} from 'src/modules/pre-order/dto/search-criteria.dto';
 import { ProductService } from 'src/modules/product/product.service';
 import { User } from 'src/modules/user/user.entity';
 import { PreOrderProduct } from 'src/modules/pre-order/entities/pre-order-product.entity';
 import { PreOrderCriteria } from 'src/modules/pre-order/entities/pre-order-criterias.entity';
+import { PRE_ORDER_STATUS } from 'src/common/enum/preOrder.enum';
+import { PreOrderProcessor } from 'src/modules/pre-order/pre-order.processor';
+import { calculateDeadline } from 'src/common/utils/date.utils';
+import { BuyOrderService } from 'src/modules/buy-order/buy-order.service';
+import {
+  SERVER_SENT_EVENT,
+  SERVER_SENT_EVENTS,
+} from 'src/common/enum/serverSentEvents.enum';
+import { TypedEventEmitter } from 'src/modules/event-emitter/typed-event-emitter.class';
+import { ReplacementCriteria } from 'src/common/enum/replacementCriteria.enum';
+
+const preOrderConfig = {
+  retryLimit: 3,
+  deadline: { m: 5 },
+};
 
 @Injectable()
 export class PreOrderService {
@@ -33,14 +46,37 @@ export class PreOrderService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly productService: ProductService,
-    @InjectQueue('preorder') private preorderQueue: Queue,
+    private readonly preOrderQueue: PreOrderProcessor,
+    private readonly buyOrderService: BuyOrderService,
+    private readonly eventEmitter: TypedEventEmitter,
   ) {}
+
+  // Method to notify order status change
+  private async notifyOrderStatusChange(
+    message: SERVER_SENT_EVENTS,
+    orderId: UUID,
+    clientId: UUID,
+    providerId: UUID,
+  ) {
+    if (!clientId) {
+      throw new Error('clientId is required for notifyOrderStatusChange');
+    }
+
+    this.eventEmitter.emit(SERVER_SENT_EVENT, {
+      orderId,
+      clientId,
+      providerId,
+      message,
+    });
+
+    console.log('Emitting update');
+  }
 
   // Creates pre-orders and adds them to the queue (grouped by provider)
   async createPreOrders(
     preOrderBody: CreatePreOrderDto,
     buyerId: UUID,
-    instance: number,
+    instance = 1,
   ) {
     try {
       const { cartProducts, replacementCriteria, searchParams } = preOrderBody;
@@ -76,17 +112,17 @@ export class PreOrderService {
         }
 
         const productsForProvider = productsByProvider[providerId];
+        const deadline = calculateDeadline(preOrderConfig.deadline);
 
         // Create PreOrder entity
         const preOrder = this.preOrderRepository.create({
           client: clientCompany,
           provider,
           buyerId: buyerId,
-          status: 'pending',
-          instance: Instance[instance],
-          responseDeadline: new Date(Date.now() + 3600000), // 1-hour response deadline
+          status: PRE_ORDER_STATUS.pending,
+          instance: instance,
+          responseDeadline: deadline, // 1-hour response deadline
         });
-
         // Create PreOrderCriteria entity from searchParams and replacementCriteria
         // save PreOrderCriteria for search next best option and to have data for further analysis
         const preOrderCriteria = this.preOrderCriteriaRepository.create({
@@ -126,23 +162,23 @@ export class PreOrderService {
         // Save all PreOrderProduct entities
         await this.preOrderProductRepository.save(preOrderProducts);
 
-        // Add the pre-order to the queue
-        await this.preorderQueue.add('process-preorder', {
-          buyerId: buyerId,
-          clientCompanyId: clientCompany.id,
-          preOrderId: preOrder.id,
-          instance,
+        // Add the pre-order to the pre-order queue
+        await this.preOrderQueue.addPreOrderJob(preOrder.id, {
+          ...preOrder,
+          status: PRE_ORDER_STATUS.pending,
+          delay: deadline, // coming from calculateDeadline(0,0,30)
         });
 
-        // Add the pre-order to the timeout queue
-        await this.preorderQueue.add(
-          'preorder-timeout',
-          { preOrderId: preOrder.id, instance },
-          {
-            delay: 3600000, // Delay for timeout (1 hour)
-            attempts: 1, // Retry only once, after the delay
-          },
+        this.notifyOrderStatusChange(
+          SERVER_SENT_EVENTS.preOrderCreated,
+          preOrder.id,
+          preOrder.client.id,
+          preOrder.provider.id,
         );
+
+        return {
+          message: `Pre-order with id ${preOrder.id} created successfully`,
+        };
       }
     } catch (error) {
       throw error;
@@ -154,9 +190,9 @@ export class PreOrderService {
     preOrderId: UUID,
     acceptedProducts: CartProductDto[],
     rejectedProducts: CartProductDto[],
-    preOrderStatus: 'timeout' | 'provider-response',
-    instance: number,
+    preOrderStatus: PRE_ORDER_STATUS,
   ) {
+    console.log(preOrderId);
     const preOrder = await this.preOrderRepository.findOne({
       where: { id: preOrderId },
       relations: [
@@ -172,45 +208,114 @@ export class PreOrderService {
       throw new Error(`Pre-order with ID ${preOrderId} not found`);
     }
 
-    // Update the pre-order status to timeout
-    // If it is a timeOut we asume all the products are rejected
-    if (preOrderStatus === 'timeout') {
-      preOrder.status = 'timeout';
-      rejectedProducts = preOrder.preOrderProducts.map((item) => {
-        return {
-          id: item.product.id,
-          quantity: item.quantity,
-          providerId: preOrder.provider.id,
-        };
-      });
+    // we check if the instance is 5 or grater and
+    // if it is we update the status to fail and kill the job
+    if (preOrder.instance >= preOrderConfig.retryLimit) {
+      preOrder.status = PRE_ORDER_STATUS.fail;
       await this.preOrderRepository.save(preOrder);
+      await this.preOrderQueue.finishJob(preOrder.id);
+
+      this.notifyOrderStatusChange(
+        SERVER_SENT_EVENTS.preOrderFail,
+        preOrder.id,
+        preOrder.buyOrder.id,
+        preOrder.provider.id,
+      );
+
+      return preOrder;
     }
 
-    // Update status based on accepted/rejected products
-    if (acceptedProducts.length > 0 && rejectedProducts.length === 0) {
-      preOrder.status = 'accepted';
-      await this.preOrderRepository.save(preOrder);
-    } else if (acceptedProducts.length > 0 && rejectedProducts.length > 0) {
-      preOrder.status = 'partialy-accepted';
-      await this.preOrderRepository.save(preOrder);
-    } else if (acceptedProducts.length === 0 && rejectedProducts.length > 0) {
-      preOrder.status = 'rejected';
-      await this.preOrderRepository.save(preOrder);
-    }
+    switch (preOrderStatus) {
+      // All the products were accepted, we create an order
+      case PRE_ORDER_STATUS.accepted:
+        if (preOrder.status != PRE_ORDER_STATUS.pending) {
+          throw new BadRequestException(
+            `Pre-order with ID ${preOrder.id} expired!`,
+          );
+        }
 
-    // TODO:: I have to create the ORDER with the accepted products
+        this.buyOrderService.createOrder({
+          client: preOrder.client,
+          provider: preOrder.provider,
+          acceptedProducts: acceptedProducts,
+          preOrder: preOrder,
+        });
+
+        break;
+      case PRE_ORDER_STATUS.partialyAccepted:
+        // If it is partially accepted we create an order with the accepted products
+        // a new PreOrder will be created with the remaining products
+        if (preOrder.status != PRE_ORDER_STATUS.pending) {
+          throw new BadRequestException(
+            `Pre-order with ID ${preOrder.id} expired!`,
+          );
+        }
+        console.log('CREATE ORDER WITH ACCEPTED PRODUCTS');
+        console.log(acceptedProducts);
+        console.log('-------');
+
+        this.buyOrderService.createOrder({
+          client: preOrder.client,
+          provider: preOrder.provider,
+          acceptedProducts: acceptedProducts,
+          preOrder: preOrder,
+        });
+
+        break;
+      case PRE_ORDER_STATUS.timeout:
+        // Update the pre-order status to timeout
+        // If it is a timeOut we asume all the products were rejected
+        acceptedProducts = [];
+        rejectedProducts = preOrder.preOrderProducts.map((item) => {
+          return {
+            id: item.product.id,
+            quantity: item.quantity,
+            providerId: preOrder.provider.id,
+          };
+        });
+        break;
+      case PRE_ORDER_STATUS.rejected:
+        // If the preorder is rejected we send a notification to the client
+        // and we update the status to rejected, a new PreOrder will be created
+        this.notifyOrderStatusChange(
+          SERVER_SENT_EVENTS.preOrderRejected,
+          preOrder.id,
+          preOrder.client.id,
+          preOrder.provider.id,
+        );
+        break;
+      default:
+        break;
+    }
+    preOrder.status = preOrderStatus;
+    await this.preOrderRepository.save(preOrder);
+
+    // -----------------------------------------------------------------
+    // Update product statuses based on accepted/rejected arrays
+    // Save updates to each pre-order product's status
+
+    for (const preOrderProduct of preOrder.preOrderProducts) {
+      if (acceptedProducts.some((p) => p.id === preOrderProduct.product.id)) {
+        preOrderProduct.accepted = true; // Accepted
+      } else if (
+        rejectedProducts.some((p) => p.id === preOrderProduct.product.id)
+      ) {
+        preOrderProduct.accepted = false; // Rejected
+      }
+    }
+    await this.preOrderRepository.save(preOrder);
+    // -----------------------------------------------------------------
 
     // Handle rejected products
     if (rejectedProducts.length > 0) {
-      this.handleRejectedProducts(
+      await this.handleRejectedProducts(
         rejectedProducts,
         preOrder.client.id,
         preOrder.criteria,
         preOrder.buyerId,
-        instance,
+        preOrder.instance,
       );
     }
-
     return preOrder;
   }
 
@@ -319,6 +424,27 @@ export class PreOrderService {
         };
       }
       return null;
+    } catch (error) {
+      throw new InternalServerErrorException(error);
+    }
+  }
+
+  async findProrderByStatus(companyId: UUID, status: PRE_ORDER_STATUS) {
+    try {
+      const preOrders = await this.preOrderRepository.find({
+        where: { client: { id: companyId }, status },
+        relations: ['preOrderProducts', 'preOrderProducts.product', 'provider'],
+      });
+      const sortedPreOrders = preOrders.sort((a, b) => {
+        if (a.updated < b.updated) {
+          return 1;
+        }
+        if (a.updated > b.updated) {
+          return -1;
+        }
+        return 0;
+      });
+      return { count: sortedPreOrders.length, preOrders: sortedPreOrders };
     } catch (error) {
       throw new InternalServerErrorException(error);
     }

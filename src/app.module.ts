@@ -13,6 +13,8 @@ import { SearchListModule } from 'src/modules/searchList/searchList.module';
 import { ProductModule } from './modules/product/product.module';
 import { PreOrderModule } from './modules/pre-order/pre-order.module';
 import { BullModule } from '@nestjs/bull';
+import { BuyOrderModule } from './modules/buy-order/buy-order.module';
+import { ServerSentEventsModule } from './modules/server-sent-events/server-sent-events.module';
 
 @Module({
   imports: [
@@ -34,6 +36,8 @@ import { BullModule } from '@nestjs/bull';
     SearchListModule,
     ProductModule,
     PreOrderModule,
+    BuyOrderModule,
+    ServerSentEventsModule,
   ],
 })
 export class AppModule {

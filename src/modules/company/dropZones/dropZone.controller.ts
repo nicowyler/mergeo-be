@@ -42,7 +42,7 @@ export class DropZoneController {
   @UseGuards(AuthGuard)
   @ResponseMessage('Drop zone encontrados con exito!')
   async get(@Param('id') id: UUID): Promise<DropZoneDto[]> {
-    const dropZones = await this.dropZoneService.get(id);
+    const dropZones = await this.dropZoneService.getAll(id);
     return dropZones;
   }
 

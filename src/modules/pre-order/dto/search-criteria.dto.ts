@@ -7,20 +7,7 @@ import {
   IsUUID,
 } from 'class-validator';
 import { UUID } from 'crypto';
-
-export enum ReplacementCriteria {
-  BEST_PRICE_SAME_UNIT = 'best_price_same_unit',
-  SAME_PRICE_SAME_UNIT = 'same_price_same_unit',
-  SAME_PRODUCT_ANOTHER_UNIT = 'same_product_another_unit',
-}
-
-export const Instance = [
-  'primera-instancia',
-  'segunda-instancia',
-  'tercera-instancia',
-  'cuarta-instancia',
-  'quinta-instancia',
-];
+import { ReplacementCriteria as RP } from 'src/common/enum/replacementCriteria.enum';
 
 export class SearchCriteriaDto {
   @IsUUID()
@@ -59,6 +46,6 @@ export class SearchCriteriaDto {
   @IsNumber()
   pickUpRadius?: number;
 
-  @IsEnum(ReplacementCriteria)
-  replacementCriteria: ReplacementCriteria;
+  @IsEnum(RP)
+  replacementCriteria: RP;
 }

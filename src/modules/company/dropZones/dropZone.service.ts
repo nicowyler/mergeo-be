@@ -146,7 +146,7 @@ export class DropZoneService {
     }
   }
 
-  async get(companyId: string): Promise<DropZoneDto[]> {
+  async getAll(companyId: string): Promise<DropZoneDto[]> {
     try {
       const company = await this.companyRepository.findOne({
         where: { id: companyId as UUID },
@@ -156,6 +156,28 @@ export class DropZoneService {
       if (!company) {
         throw new NotFoundException(ErrorMessages.COMPANY_NOT_FOUND);
       }
+
+      // Define custom order for days in Spanish
+      const dayOrder = [
+        'Lunes',
+        'Martes',
+        'Miercoles',
+        'Jueves',
+        'Viernes',
+        'Sabado',
+        'Domingo',
+      ];
+
+      // Sort schedules by day and optionally by startHour within the same day
+      company.dropZones.forEach((dropZone) => {
+        dropZone.schedules.sort((a, b) => {
+          const dayComparison =
+            dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day);
+          return dayComparison !== 0
+            ? dayComparison
+            : a.startHour - b.startHour;
+        });
+      });
 
       return company.dropZones;
     } catch (error) {

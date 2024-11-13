@@ -1,7 +1,7 @@
 import { Entity, Column, PrimaryGeneratedColumn, OneToOne } from 'typeorm';
 import { UUID } from 'crypto';
-import { ReplacementCriteria } from 'src/modules/pre-order/dto/search-criteria.dto';
 import { PreOrder } from 'src/modules/pre-order/entities/pre-order.entity';
+import { ReplacementCriteria } from 'src/common/enum/replacementCriteria.enum';
 
 @Entity()
 export class PreOrderCriteria {
@@ -49,4 +49,5 @@ export class PreOrderCriteria {
 
   @OneToOne(() => PreOrder, (preOrder) => preOrder.criteria)
   preOrder: PreOrder;
+  reponseDeadline: any;
 }

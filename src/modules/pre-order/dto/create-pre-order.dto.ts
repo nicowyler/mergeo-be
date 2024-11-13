@@ -7,7 +7,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { UUID } from 'crypto';
-import { ReplacementCriteria } from 'src/modules/pre-order/dto/search-criteria.dto';
+import { ReplacementCriteria } from 'src/common/enum/replacementCriteria.enum';
 import { SearchProductsDto } from 'src/modules/product/dto/search-products.dto';
 
 export class CartProductDto {

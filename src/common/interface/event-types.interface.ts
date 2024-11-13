@@ -1,3 +1,5 @@
+import { UUID } from 'crypto';
+
 export interface EventPayloads {
   'user.welcome': {
     name: string;
@@ -31,5 +33,12 @@ export interface EventPayloads {
     userName: string;
     unitsCount: string;
     product: string;
+  };
+
+  'sse.event': {
+    orderId?: UUID;
+    clientId: UUID;
+    providerId: UUID;
+    message: string;
   };
 }

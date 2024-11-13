@@ -21,9 +21,14 @@ import { ConfigService } from '@nestjs/config';
 import { EncoderService } from 'src/modules/auth/encoder.service';
 import { PreOrderProduct } from 'src/modules/pre-order/entities/pre-order-product.entity';
 import { PreOrderCriteria } from 'src/modules/pre-order/entities/pre-order-criterias.entity';
+import { BuyOrderService } from 'src/modules/buy-order/buy-order.service';
+import { BuyOrder } from 'src/modules/buy-order/entities/buy-order.entity';
+import { BuyOrderModule } from 'src/modules/buy-order/buy-order.module';
+import { BuyOrderProduct } from 'src/modules/buy-order/entities/buy-order-product.entity';
 
 @Module({
   imports: [
+    BuyOrderModule,
     TypeOrmModule.forFeature([
       PreOrder,
       PreOrderProduct,
@@ -35,6 +40,8 @@ import { PreOrderCriteria } from 'src/modules/pre-order/entities/pre-order-crite
       Address,
       Permission,
       Roles,
+      BuyOrder,
+      BuyOrderProduct,
     ]),
     BullModule.registerQueue({
       name: 'preorder', // Queue name for pre-order jobs
@@ -44,6 +51,7 @@ import { PreOrderCriteria } from 'src/modules/pre-order/entities/pre-order-crite
   providers: [
     PreOrderService,
     PreOrderProcessor,
+    BuyOrderService,
     ProductService,
     CompanyService,
     UserService,

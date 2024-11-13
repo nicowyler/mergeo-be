@@ -185,6 +185,8 @@ export class ProductService {
 
       // Retrieve products via pick-up logic
       pickUpProducts = await pickUpQuery.getMany();
+      // we add isPickup flag to each product found in the pickup area
+      pickUpProducts.map((product) => (product.isPickup = true));
     }
 
     // Combine results from both queries
