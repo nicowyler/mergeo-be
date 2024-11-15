@@ -2,15 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { Product } from 'src/modules/product/entities/product.entity';
-import { Brackets, In, Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Branch } from 'src/modules/company/branch.entity';
 import { SearchProductsDto } from 'src/modules/product/dto/search-products.dto';
-import {
-  dayNameToNumber,
-  getConvertedPricePerUnit,
-  getDateRangeForDays,
-} from 'src/modules/product/utils';
+import { getConvertedPricePerUnit } from 'src/modules/product/utils';
 import { UUID } from 'crypto';
 
 @Injectable()
@@ -89,7 +85,9 @@ export class ProductService {
     if (withCompany) {
       query.leftJoinAndSelect('product.company', 'company'); // Inner join
     } else {
-      query.leftJoin('product.company', 'company'); // Left join
+      query
+        .leftJoin('product.company', 'company') // Left join
+        .select(['product', 'company.id']);
     }
     // Create the base query for products and companies
     query
@@ -139,7 +137,9 @@ export class ProductService {
       if (withCompany) {
         pickUpQuery.innerJoin('product.company', 'company'); // Inner join
       } else {
-        pickUpQuery.leftJoin('product.company', 'company'); // Left join
+        pickUpQuery
+          .leftJoin('product.company', 'company') // Left join
+          .select(['product', 'company.id']);
       }
       pickUpQuery
         .distinctOn(['product.id', 'company.id'])

@@ -11,14 +11,28 @@ import {
 @Controller('server-sent-events')
 export class ServerSentEventsController {
   constructor(private readonly eventEmitter: EventEmitter2) {}
-  @Sse(':id')
-  sendOrderStatusUpdates(
+  @Sse('client/:id')
+  sendClientOrderStatusUpdates(
     @Param('id') clientId: UUID,
   ): Observable<MessageEvent> {
     console.log(`Subscribing to SSE for client ${clientId}`);
 
     return fromEvent(this.eventEmitter, SERVER_SENT_EVENT).pipe(
       filter((event: OrderStatusUpdate) => event.clientId === clientId),
+      map((payload) => ({
+        data: payload,
+      })),
+    );
+  }
+
+  @Sse('provider/:id')
+  sendProviderOrderStatusUpdates(
+    @Param('id') providerId: UUID,
+  ): Observable<MessageEvent> {
+    console.log(`Subscribing to SSE for client ${providerId}`);
+
+    return fromEvent(this.eventEmitter, SERVER_SENT_EVENT).pipe(
+      filter((event: OrderStatusUpdate) => event.providerId === providerId),
       map((payload) => ({
         data: payload,
       })),
