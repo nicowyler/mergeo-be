@@ -22,9 +22,21 @@ export class BuyOrderController {
     return this.buyOrderService.createOrder(createBuyOrderDto);
   }
 
+  @Get(':id/client')
+  @ResponseMessage('Ordenes de compra encontradas con exito!')
+  findClientOrders(@Param('id') clientId: UUID) {
+    return this.buyOrderService.findBuyOrders(clientId);
+  }
+
+  @Get(':id/provider')
+  @ResponseMessage('Ordenes de compra encontradas con exito!')
+  findProviderOrders(@Param('id') providerId: UUID) {
+    return this.buyOrderService.findBuyOrders(providerId, false);
+  }
+
   @Get(':id')
   @ResponseMessage('Ordenes de compra encontradas con exito!')
-  findAll(@Param('id') clientId: UUID) {
-    return this.buyOrderService.findAll(clientId);
+  findOrderById(@Param('id') orderId: UUID) {
+    return this.buyOrderService.findOrderById(orderId);
   }
 }

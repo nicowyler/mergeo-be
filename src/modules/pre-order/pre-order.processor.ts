@@ -10,7 +10,7 @@ import { PreOrderService } from './pre-order.service';
 import { PRE_ORDER_STATUS } from 'src/common/enum/preOrder.enum';
 import { forwardRef, Inject, NotFoundException } from '@nestjs/common';
 import { UUID } from 'crypto';
-import { delay } from 'rxjs';
+import { CartProductDto } from 'src/modules/pre-order/dto/create-pre-order.dto';
 
 @Processor('preorder')
 export class PreOrderProcessor {
@@ -23,11 +23,12 @@ export class PreOrderProcessor {
   @Process('process-preorder')
   async handlePreOrderJob(job: Job) {
     try {
-      const { acceptedProducts, rejectedProducts, status } = job.data;
+      const { acceptedProducts, rejectedProducts, userId } = job.data;
 
       console.log(`Job ${job.id} processed.`);
       await this.preOrderService.handleProviderResponse(
         job.id as UUID,
+        userId,
         acceptedProducts,
         rejectedProducts,
         PRE_ORDER_STATUS.timeout,
@@ -52,7 +53,14 @@ export class PreOrderProcessor {
     );
   }
 
-  async updatePreOrderJob(id: UUID, data: any) {
+  async updatePreOrderJob(
+    id: UUID,
+    userId: UUID,
+    data: {
+      acceptedProducts: CartProductDto[];
+      rejectedProducts: CartProductDto[];
+    },
+  ) {
     const job = await this.getPreOrderJob(id);
     await job.remove();
     const { acceptedProducts, rejectedProducts } = data;
@@ -67,6 +75,7 @@ export class PreOrderProcessor {
 
     await this.preOrderService.handleProviderResponse(
       id,
+      userId,
       acceptedProducts,
       rejectedProducts,
       updatedStatus,
@@ -139,7 +148,7 @@ export class PreOrderProcessor {
 
   @OnQueueFailed()
   async onFailed(job: Job, error: Error) {
-    const { acceptedProducts, rejectedProducts } = job.data;
+    const { acceptedProducts, rejectedProducts, userId } = job.data;
     if (
       error.message.includes('job stalled') ||
       error.message.includes(PRE_ORDER_STATUS.timeout)
@@ -148,6 +157,7 @@ export class PreOrderProcessor {
       job.update({ ...job.data, status: PRE_ORDER_STATUS.timeout });
 
       await this.preOrderService.handleProviderResponse(
+        userId,
         job.id as UUID,
         acceptedProducts,
         rejectedProducts,

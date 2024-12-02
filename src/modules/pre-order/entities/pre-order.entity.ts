@@ -20,6 +20,9 @@ export class PreOrder extends DateAudit {
   @PrimaryGeneratedColumn('uuid')
   id: UUID;
 
+  @Column({ type: 'int', generated: 'increment' })
+  preOrderNumber: number;
+
   @Column()
   buyerId: UUID; // this is a userId
 

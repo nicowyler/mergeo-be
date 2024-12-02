@@ -18,6 +18,12 @@ export class BuyOrder extends DateAudit {
   @PrimaryGeneratedColumn('uuid')
   id: UUID;
 
+  @Column({ type: 'uuid' })
+  userId: UUID;
+
+  @Column({ type: 'int', generated: 'increment' })
+  orderNumber: number;
+
   // we need the client to show to the Provider
   @ManyToOne(() => Company, (company) => company.clientPreOrders)
   client: Company;

@@ -1,9 +1,12 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateBuyOrderDto } from './dto/create-buy-order.dto';
 import { BuyOrder } from 'src/modules/buy-order/entities/buy-order.entity';
 import { In, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Product } from 'src/modules/product/entities/product.entity';
 import { BuyOrderProduct } from 'src/modules/buy-order/entities/buy-order-product.entity';
 import { UUID } from 'crypto';
 import { Branch } from 'src/modules/company/branch.entity';
@@ -12,6 +15,14 @@ import {
   SERVER_SENT_EVENTS,
 } from 'src/common/enum/serverSentEvents.enum';
 import { TypedEventEmitter } from 'src/modules/event-emitter/typed-event-emitter.class';
+import { PreOrderProduct } from 'src/modules/pre-order/entities/pre-order-product.entity';
+import { User } from 'src/modules/user/user.entity';
+import { plainToInstance } from 'class-transformer';
+import {
+  AddressDto,
+  OrderDto,
+  UserDto,
+} from 'src/modules/buy-order/dto/find-buy-order.dto';
 
 export type OrderStatusUpdate = {
   orderId: string; // UUID of the order
@@ -25,12 +36,14 @@ export class BuyOrderService {
   constructor(
     @InjectRepository(BuyOrder)
     private readonly buyOrderRepository: Repository<BuyOrder>,
-    @InjectRepository(Product)
-    private readonly productRepository: Repository<Product>,
+    @InjectRepository(PreOrderProduct)
+    private readonly preOrderProductRepository: Repository<PreOrderProduct>,
     @InjectRepository(BuyOrderProduct)
     private readonly buyOrderProductRepository: Repository<BuyOrderProduct>,
     @InjectRepository(Branch)
     private readonly branchRepository: Repository<Branch>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     private readonly eventEmitter: TypedEventEmitter,
   ) {}
 
@@ -55,13 +68,16 @@ export class BuyOrderService {
   }
 
   async createOrder(createBuyOrderDto: CreateBuyOrderDto) {
-    const { preOrder, acceptedProducts, client, provider } = createBuyOrderDto;
+    const { preOrder, acceptedProducts, client, provider, userId } =
+      createBuyOrderDto;
 
     if (!client || !provider || !preOrder) {
       throw new BadRequestException('Client, provider, or pre-order not found');
     }
+
     // Create BuyOrder with related entities
     const buyOrder = this.buyOrderRepository.create({
+      userId,
       client,
       provider,
       preOrder,
@@ -71,25 +87,24 @@ export class BuyOrderService {
 
     // Fetch product entities for each accepted product
     const productIds = acceptedProducts.map((product) => product.id); // Extract product IDs
-    const products = await this.productRepository.findBy({
-      id: In(productIds),
-    }); // Adjust this based on your repository setup
+    const preOrderProducts = await this.preOrderProductRepository.find({
+      where: {
+        id: In(productIds),
+      },
+      relations: ['product'],
+    });
 
     // Map to buyOrderProducts with product entity references
-    const buyOrderProducts = acceptedProducts.map((acceptedProduct) => {
-      const productEntity = products.find(
-        (product) => product.id === acceptedProduct.id,
-      );
-      if (!productEntity) {
-        throw new BadRequestException(
-          `Product with ID ${acceptedProduct.id} not found`,
-        );
+    const buyOrderProducts = preOrderProducts.map((preOrderProduct) => {
+      try {
+        return {
+          buyOrder, // reference the saved BuyOrder
+          product: preOrderProduct.product, // Use the product entity here
+          quantity: preOrderProduct.quantity,
+        };
+      } catch (error) {
+        throw new NotFoundException(error.message);
       }
-      return {
-        buyOrder, // reference the saved BuyOrder
-        product: productEntity, // Use the product entity here
-        quantity: acceptedProduct.quantity,
-      };
     });
 
     // Use bulk insert for buyOrderProducts
@@ -101,10 +116,14 @@ export class BuyOrderService {
     return buyOrder;
   }
 
-  async findAll(clientId: UUID) {
+  async findBuyOrders(id: UUID, isClient = true) {
     // Step 1: Fetch BuyOrders with related entities
+    const whereCondition = isClient
+      ? { client: { id } } // Search by client ID
+      : { provider: { id } }; // Search by provider ID
+
     const buyOrders = await this.buyOrderRepository.find({
-      where: { client: { id: clientId } },
+      where: whereCondition,
       relations: [
         'client',
         'provider',
@@ -148,11 +167,86 @@ export class BuyOrderService {
     return sortedOrders;
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} buyOrder`;
-  }
+  async findOrderById(id: UUID) {
+    const order = await this.buyOrderRepository.findOne({
+      where: { id },
+      relations: [
+        'client',
+        'client.branches',
+        'client.branches.address',
+        'provider',
+        'provider.branches',
+        'provider.branches.address',
+        'preOrder.criteria',
+        'buyOrderProducts.product',
+      ],
+    });
 
-  remove(id: number) {
-    return `This action removes a #${id} buyOrder`;
+    // Dynamically compute missing properties
+    const clientUser = await this.userRepository.findOne({
+      where: { id: order.preOrder.buyerId },
+    });
+
+    const providerUser = await this.userRepository.findOne({
+      where: { id: order.userId },
+    });
+
+    const clientAddress = order.client.branches.find((b) => b.isMain);
+    const deliveryAddress = order.client.branches.find(
+      (b) => b.id === order.preOrder.criteria.branchId,
+    );
+
+    const providerAddress = order.provider.branches.find((b) => b.isMain);
+
+    // Transform entity into DTO and attach computed properties
+    const orderDto = plainToInstance(OrderDto, order, {
+      excludeExtraneousValues: true,
+    });
+
+    orderDto.client.user = plainToInstance(UserDto, clientUser, {
+      excludeExtraneousValues: true,
+    });
+
+    orderDto.client.deliveryAddress = plainToInstance(
+      AddressDto,
+      {
+        ...deliveryAddress.address,
+        phoneNumber: deliveryAddress.phoneNumber,
+        email: deliveryAddress.email,
+      },
+      {
+        excludeExtraneousValues: true,
+      },
+    );
+
+    orderDto.client.address = plainToInstance(
+      AddressDto,
+      {
+        ...clientAddress.address,
+        phoneNumber: clientAddress.phoneNumber,
+        email: clientAddress.email,
+      },
+      {
+        excludeExtraneousValues: true,
+      },
+    );
+
+    orderDto.provider.user = plainToInstance(UserDto, providerUser, {
+      excludeExtraneousValues: true,
+    });
+
+    orderDto.provider.address = plainToInstance(
+      AddressDto,
+      {
+        ...providerAddress.address,
+        phoneNumber: providerAddress.phoneNumber,
+        email: providerAddress.email,
+      },
+      {
+        excludeExtraneousValues: true,
+      },
+    );
+
+    return orderDto;
   }
 }

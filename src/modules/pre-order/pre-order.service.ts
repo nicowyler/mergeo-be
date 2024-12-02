@@ -27,7 +27,7 @@ import { ReplacementCriteria } from 'src/common/enum/replacementCriteria.enum';
 
 const preOrderConfig = {
   retryLimit: 3,
-  deadline: { m: 5 },
+  deadline: { h: 3 },
 };
 
 @Injectable()
@@ -101,6 +101,8 @@ export class PreOrderService {
         return acc;
       }, {});
 
+      // TODO
+      // tengo que cambiar un poco esta logica para agrupe por provider y despues mande las preOrdenes
       // Create one pre-order per provider
       for (const providerId in productsByProvider) {
         const provider = await this.companyRepository.findOne({
@@ -177,7 +179,8 @@ export class PreOrderService {
         );
 
         return {
-          message: `Pre-order with id ${preOrder.id} created successfully`,
+          message: `Pre-order created successfully`,
+          preOrderId: preOrder.id,
         };
       }
     } catch (error) {
@@ -185,14 +188,34 @@ export class PreOrderService {
     }
   }
 
+  async changePreOrderProdcuts(
+    preOrder: PreOrder,
+    acceptedProducts: CartProductDto[],
+    rejectedProducts: CartProductDto[],
+  ) {
+    // -----------------------------------------------------------------
+    // Update product statuses based on accepted/rejected arrays
+    // Save updates to each pre-order product's status
+
+    for (const preOrderProduct of preOrder.preOrderProducts) {
+      if (acceptedProducts.some((p) => p.id === preOrderProduct.id)) {
+        preOrderProduct.accepted = true; // Accepted
+      } else if (rejectedProducts.some((p) => p.id === preOrderProduct.id)) {
+        preOrderProduct.accepted = false; // Rejected
+      }
+    }
+    await this.preOrderRepository.save(preOrder);
+    // -----------------------------------------------------------------
+  }
+
   // Handle provider response for pre-order acceptance/rejection
   async handleProviderResponse(
     preOrderId: UUID,
+    userId: UUID,
     acceptedProducts: CartProductDto[],
     rejectedProducts: CartProductDto[],
     preOrderStatus: PRE_ORDER_STATUS,
   ) {
-    console.log(preOrderId);
     const preOrder = await this.preOrderRepository.findOne({
       where: { id: preOrderId },
       relations: [
@@ -234,14 +257,20 @@ export class PreOrderService {
           );
         }
 
+        await this.changePreOrderProdcuts(
+          preOrder,
+          acceptedProducts,
+          rejectedProducts,
+        );
+
         this.buyOrderService.createOrder({
           client: preOrder.client,
+          userId: userId,
           provider: preOrder.provider,
           acceptedProducts: acceptedProducts,
           preOrder: preOrder,
         });
 
-        break;
       case PRE_ORDER_STATUS.partialyAccepted:
         // If it is partially accepted we create an order with the accepted products
         // a new PreOrder will be created with the remaining products
@@ -254,7 +283,14 @@ export class PreOrderService {
         console.log(acceptedProducts);
         console.log('-------');
 
+        await this.changePreOrderProdcuts(
+          preOrder,
+          acceptedProducts,
+          rejectedProducts,
+        );
+
         this.buyOrderService.createOrder({
+          userId: userId,
           client: preOrder.client,
           provider: preOrder.provider,
           acceptedProducts: acceptedProducts,
@@ -284,37 +320,28 @@ export class PreOrderService {
           preOrder.provider.id,
         );
         break;
-      default:
-        break;
     }
     preOrder.status = preOrderStatus;
     await this.preOrderRepository.save(preOrder);
 
-    // -----------------------------------------------------------------
-    // Update product statuses based on accepted/rejected arrays
-    // Save updates to each pre-order product's status
-
-    for (const preOrderProduct of preOrder.preOrderProducts) {
-      if (acceptedProducts.some((p) => p.id === preOrderProduct.product.id)) {
-        preOrderProduct.accepted = true; // Accepted
-      } else if (
-        rejectedProducts.some((p) => p.id === preOrderProduct.product.id)
-      ) {
-        preOrderProduct.accepted = false; // Rejected
-      }
-    }
-    await this.preOrderRepository.save(preOrder);
-    // -----------------------------------------------------------------
-
     // Handle rejected products
     if (rejectedProducts.length > 0) {
-      await this.handleRejectedProducts(
+      const result: boolean = await this.handleRejectedProducts(
         rejectedProducts,
         preOrder.client.id,
         preOrder.criteria,
         preOrder.buyerId,
         preOrder.instance,
       );
+
+      if (!result) {
+        this.notifyOrderStatusChange(
+          SERVER_SENT_EVENTS.preOrderFail,
+          preOrder.id,
+          preOrder.buyOrder.id,
+          preOrder.provider.id,
+        );
+      }
     }
     return preOrder;
   }
@@ -326,6 +353,7 @@ export class PreOrderService {
     buyerId: UUID,
     instance: number,
   ) {
+    let nextProductFound = true;
     // Process each rejected product
     for (const rejectedProduct of rejectedProducts) {
       // Find the next best product for the rejected product
@@ -351,8 +379,11 @@ export class PreOrderService {
         instance = instance + 1;
         // Create new pre-order witht the next best product
         this.createPreOrders(payload, buyerId, instance);
+      } else {
+        nextProductFound = false;
       }
     }
+    return nextProductFound;
   }
 
   // Find next best provider logic (can be updated based on business logic)
@@ -374,7 +405,7 @@ export class PreOrderService {
         startHour: searchCriteria.startHour,
         endHour: searchCriteria.endHour,
         name: rejectedProduct.name, // I want to force the search to be the same name as the rejected product
-        brand: rejectedProduct.brand, // here the same but for the brand
+        brand: searchCriteria.brand || '', // here the same but for the brand
         baseMeasurementUnit:
           searchCriteria.baseMeasurementUnit || rejectedProduct.measurementUnit,
         isPickUp: searchCriteria.isPickUp,
@@ -393,26 +424,29 @@ export class PreOrderService {
       const filteredProducts = products.filter((product) => {
         if (product.id === rejectedProduct.id) {
           return false; // Exclude the rejected product
-        }
-        switch (searchCriteria.replacementCriteria) {
-          // Mejor precio x unidad de medida
-          // this is the default behaviour when searching a product
-          case ReplacementCriteria.BEST_PRICE_SAME_UNIT:
-            return product;
+        } else {
+          switch (searchCriteria.replacementCriteria) {
+            // Mejor precio x unidad de medida
+            // this is the default behaviour when searching a product
+            case ReplacementCriteria.BEST_PRICE_SAME_UNIT:
+              return product;
 
-          // Mismo o mejor precio x misma unidad de medida
-          case ReplacementCriteria.SAME_PRICE_SAME_UNIT:
-            return (
-              product.measurementUnit === rejectedProduct.measurementUnit &&
-              product.price <= rejectedProduct.price
-            );
+            // Mismo o mejor precio x misma unidad de medida
+            case ReplacementCriteria.SAME_PRICE_SAME_UNIT:
+              return (
+                product.measurementUnit === rejectedProduct.measurementUnit &&
+                product.price <= rejectedProduct.price
+              );
 
-          // Mismo producto x otra unidad de medida
-          case ReplacementCriteria.SAME_PRODUCT_ANOTHER_UNIT:
-            return product.measurementUnit !== rejectedProduct.measurementUnit;
+            // Mismo producto x otra unidad de medida
+            case ReplacementCriteria.SAME_PRODUCT_ANOTHER_UNIT:
+              return (
+                product.measurementUnit !== rejectedProduct.measurementUnit
+              );
 
-          default:
-            return false; // No criteria matched, filter out
+            default:
+              return false; // No criteria matched, filter out
+          }
         }
       });
       // Return the best product based on the applied criteria (e.g., the first one in the filtered list)
@@ -445,6 +479,44 @@ export class PreOrderService {
         return 0;
       });
       return { count: sortedPreOrders.length, preOrders: sortedPreOrders };
+    } catch (error) {
+      throw new InternalServerErrorException(error);
+    }
+  }
+
+  async findSellPreOrders(companyId: UUID, status: PRE_ORDER_STATUS) {
+    try {
+      const preOrders = await this.preOrderRepository.find({
+        where: { provider: { id: companyId }, status },
+        relations: [
+          'preOrderProducts',
+          'preOrderProducts.product',
+          'client',
+          'buyOrder',
+        ],
+      });
+      const sortedPreOrders = preOrders.sort((a, b) => {
+        if (a.updated < b.updated) {
+          return 1;
+        }
+        if (a.updated > b.updated) {
+          return -1;
+        }
+        return 0;
+      });
+      return sortedPreOrders;
+    } catch (error) {
+      throw new InternalServerErrorException(error);
+    }
+  }
+
+  async getPreOrderByid(preOrderId: UUID) {
+    try {
+      const preOrders = await this.preOrderRepository.findOne({
+        where: { id: preOrderId },
+        relations: ['preOrderProducts', 'preOrderProducts.product', 'client'],
+      });
+      return preOrders;
     } catch (error) {
       throw new InternalServerErrorException(error);
     }
