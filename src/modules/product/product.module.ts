@@ -7,10 +7,18 @@ import { Address } from 'src/modules/company/address.entity';
 import { Branch } from 'src/modules/company/branch.entity';
 import { Company } from 'src/modules/company/company.entity';
 import { Product } from './entities/product.entity';
+import { ProductList } from 'src/modules/product/entities/productList.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Product, User, Company, Branch, Address]),
+    TypeOrmModule.forFeature([
+      Product,
+      ProductList,
+      User,
+      Company,
+      Branch,
+      Address,
+    ]),
   ],
   controllers: [ProductController],
   providers: [ProductService],

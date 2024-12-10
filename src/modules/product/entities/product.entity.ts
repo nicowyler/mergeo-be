@@ -3,9 +3,12 @@ import { DateAudit } from 'src/common/entities/base.entity';
 import { BuyOrderProduct } from 'src/modules/buy-order/entities/buy-order-product.entity';
 import { Company } from 'src/modules/company/company.entity';
 import { PreOrderProduct } from 'src/modules/pre-order/entities/pre-order-product.entity';
+import { ProductList } from 'src/modules/product/entities/productList.entity';
 import {
   Column,
   Entity,
+  JoinTable,
+  ManyToMany,
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
@@ -77,4 +80,8 @@ export class Product extends DateAudit {
     (buyOrderProduct) => buyOrderProduct.product,
   )
   buyOrderProduct: BuyOrderProduct[];
+
+  @ManyToMany(() => ProductList, (productList) => productList.products)
+  @JoinTable() // Defines the join table
+  lists: ProductList[];
 }

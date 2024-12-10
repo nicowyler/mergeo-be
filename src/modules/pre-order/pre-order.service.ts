@@ -495,15 +495,21 @@ export class PreOrderService {
           'buyOrder',
         ],
       });
-      const sortedPreOrders = preOrders.sort((a, b) => {
-        if (a.updated < b.updated) {
-          return 1;
-        }
-        if (a.updated > b.updated) {
-          return -1;
-        }
-        return 0;
+
+      // Sort preOrders by updated date (descending)
+      const sortedPreOrders = preOrders.sort(
+        (a, b) => b.updated.getTime() - a.updated.getTime(),
+      );
+
+      // Sort preOrderProducts by the accepted flag (accepted ones on top)
+      sortedPreOrders.forEach((preOrder) => {
+        preOrder.preOrderProducts = preOrder.preOrderProducts.sort((a, b) => {
+          if (a.accepted && !b.accepted) return -1; // Accepted comes first
+          if (!a.accepted && b.accepted) return 1; // Non-accepted comes later
+          return 0; // Retain relative order for products with the same accepted status
+        });
       });
+
       return sortedPreOrders;
     } catch (error) {
       throw new InternalServerErrorException(error);
@@ -512,11 +518,16 @@ export class PreOrderService {
 
   async getPreOrderByid(preOrderId: UUID) {
     try {
-      const preOrders = await this.preOrderRepository.findOne({
+      const preOrder = await this.preOrderRepository.findOne({
         where: { id: preOrderId },
         relations: ['preOrderProducts', 'preOrderProducts.product', 'client'],
       });
-      return preOrders;
+      preOrder.preOrderProducts = preOrder.preOrderProducts.sort((a, b) => {
+        if (a.accepted && !b.accepted) return -1; // Accepted comes first
+        if (!a.accepted && b.accepted) return 1; // Non-accepted comes later
+        return 0; // Retain relative order for products with the same accepted status
+      });
+      return preOrder;
     } catch (error) {
       throw new InternalServerErrorException(error);
     }

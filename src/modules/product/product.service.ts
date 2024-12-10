@@ -8,14 +8,77 @@ import { Branch } from 'src/modules/company/branch.entity';
 import { SearchProductsDto } from 'src/modules/product/dto/search-products.dto';
 import { getConvertedPricePerUnit } from 'src/modules/product/utils';
 import { UUID } from 'crypto';
+import { ProductList } from 'src/modules/product/entities/productList.entity';
+import { CreateProductsListDto } from 'src/modules/product/dto/create-productsList.dto';
+import { Company } from 'src/modules/company/company.entity';
+import { Gs1SearchProductsDto } from 'src/modules/product/dto/gs1-search.dto';
 
 @Injectable()
 export class ProductService {
   constructor(
     @InjectRepository(Product)
     private readonly productRepository: Repository<Product>,
+    @InjectRepository(ProductList)
+    private readonly productListRepository: Repository<ProductList>,
+    @InjectRepository(Company)
+    private readonly companyRepository: Repository<Company>,
   ) {}
 
+  // PRODUCTS LISTS
+  async findLists(companyId: UUID) {
+    return this.productListRepository.find({
+      where: { company: { id: companyId } },
+    });
+  }
+
+  async createList(body: CreateProductsListDto) {
+    try {
+      const { name, companyId } = body;
+
+      // Find the company
+      const company = await this.companyRepository.findOne({
+        where: { id: companyId },
+      });
+
+      if (!company) {
+        throw new Error('Company not found');
+      }
+
+      // Create and save the new product list
+      const productList = this.productListRepository.create({ name, company });
+      return this.productListRepository.save(productList);
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // GS1
+  async searchProductsByGS1(searchProductsDto: Gs1SearchProductsDto) {
+    const { name, brand } = searchProductsDto;
+
+    if (name == undefined && brand == undefined) {
+      return [];
+    }
+
+    const queryBuilder = this.productRepository.createQueryBuilder('product');
+
+    if (name) {
+      queryBuilder.andWhere('LOWER(product.name) LIKE LOWER(:name)', {
+        name: `%${name}%`,
+      });
+    }
+
+    if (brand) {
+      queryBuilder.andWhere('LOWER(product.brand) LIKE LOWER(:brand)', {
+        brand: `%${brand}%`,
+      });
+    }
+
+    const results = await queryBuilder.getMany();
+    return results;
+  }
+
+  //PRODUCT
   create(createProductDto: CreateProductDto) {
     return 'This action adds a new product';
   }

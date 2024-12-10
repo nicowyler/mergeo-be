@@ -13,6 +13,7 @@ import { DropZone } from 'src/modules/company/dropZones/dropZone.entity';
 import { Product } from 'src/modules/product/entities/product.entity';
 import { PreOrder } from 'src/modules/pre-order/entities/pre-order.entity';
 import { UUID } from 'crypto';
+import { ProductList } from 'src/modules/product/entities/productList.entity';
 
 @Entity()
 @Unique('UQ_BUSINESS_NAME', ['razonSocial'])
@@ -57,4 +58,7 @@ export class Company extends DateAudit {
 
   @OneToMany(() => PreOrder, (preOrder) => preOrder.provider)
   providerPreOrders: PreOrder[]; // Pre-orders fulfilled by this company
+
+  @OneToMany(() => ProductList, (productList) => productList.company)
+  productLists: ProductList[];
 }

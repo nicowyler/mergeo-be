@@ -25,6 +25,7 @@ import { BuyOrderService } from 'src/modules/buy-order/buy-order.service';
 import { BuyOrder } from 'src/modules/buy-order/entities/buy-order.entity';
 import { BuyOrderModule } from 'src/modules/buy-order/buy-order.module';
 import { BuyOrderProduct } from 'src/modules/buy-order/entities/buy-order-product.entity';
+import { ProductList } from 'src/modules/product/entities/productList.entity';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { BuyOrderProduct } from 'src/modules/buy-order/entities/buy-order-produc
       PreOrderCriteria,
       Company,
       Product,
+      ProductList,
       User,
       Branch,
       Address,
