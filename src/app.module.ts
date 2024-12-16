@@ -15,6 +15,7 @@ import { PreOrderModule } from './modules/pre-order/pre-order.module';
 import { BullModule } from '@nestjs/bull';
 import { BuyOrderModule } from './modules/buy-order/buy-order.module';
 import { ServerSentEventsModule } from './modules/server-sent-events/server-sent-events.module';
+import { Gs1Module } from './modules/gs1/gs1.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { ServerSentEventsModule } from './modules/server-sent-events/server-sent
     PreOrderModule,
     BuyOrderModule,
     ServerSentEventsModule,
+    Gs1Module,
   ],
 })
 export class AppModule {

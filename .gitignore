@@ -399,3 +399,4 @@ dist
 .webpack
 .serverless/**/*.zip
 /data/postgis
+certificates/
