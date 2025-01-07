@@ -26,10 +26,12 @@ import { BuyOrder } from 'src/modules/buy-order/entities/buy-order.entity';
 import { BuyOrderModule } from 'src/modules/buy-order/buy-order.module';
 import { BuyOrderProduct } from 'src/modules/buy-order/entities/buy-order-product.entity';
 import { ProductList } from 'src/modules/product/entities/productList.entity';
+import { ProductModule } from 'src/modules/product/product.module';
 
 @Module({
   imports: [
     BuyOrderModule,
+    ProductModule,
     TypeOrmModule.forFeature([
       PreOrder,
       PreOrderProduct,
@@ -54,7 +56,6 @@ import { ProductList } from 'src/modules/product/entities/productList.entity';
     PreOrderService,
     PreOrderProcessor,
     BuyOrderService,
-    ProductService,
     CompanyService,
     UserService,
     RoleService,

@@ -1,6 +1,6 @@
 import { IsOptional, IsString } from 'class-validator';
 
-export class Gs1SearchProductsDto {
+export class PrdouctInlistDto {
   @IsOptional()
   @IsString()
   name?: string;
@@ -12,4 +12,8 @@ export class Gs1SearchProductsDto {
   @IsOptional()
   @IsString()
   netContent?: number;
+
+  @IsOptional()
+  @IsString()
+  measurmentUnit?: string;
 }

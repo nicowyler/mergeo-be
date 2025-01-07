@@ -1,6 +1,4 @@
-import { Injectable } from '@nestjs/common';
-import { CreateProductDto } from './dto/create-product.dto';
-import { UpdateProductDto } from './dto/update-product.dto';
+import { Injectable, Logger } from '@nestjs/common';
 import { Product } from 'src/modules/product/entities/product.entity';
 import { In, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -11,10 +9,15 @@ import { UUID } from 'crypto';
 import { ProductList } from 'src/modules/product/entities/productList.entity';
 import { CreateProductsListDto } from 'src/modules/product/dto/create-productsList.dto';
 import { Company } from 'src/modules/company/company.entity';
-import { Gs1SearchProductsDto } from 'src/modules/product/dto/gs1-search.dto';
+import { PrdouctInlistDto } from 'src/modules/product/dto/prdouct-in-list.dto';
+import { MockProductsService } from 'src/modules/product/mock-products.service';
+import { ProductMapper } from 'src/modules/product/productMapper';
+import { Gs1ProductDto } from 'src/modules/product/dto/gs1-product.dto';
 
 @Injectable()
 export class ProductService {
+  private readonly logger = new Logger(ProductService.name);
+
   constructor(
     @InjectRepository(Product)
     private readonly productRepository: Repository<Product>,
@@ -22,12 +25,21 @@ export class ProductService {
     private readonly productListRepository: Repository<ProductList>,
     @InjectRepository(Company)
     private readonly companyRepository: Repository<Company>,
+    private readonly mockProductsService: MockProductsService,
+    private readonly productMapper: ProductMapper,
   ) {}
 
   // PRODUCTS LISTS
   async findLists(companyId: UUID) {
     return this.productListRepository.find({
       where: { company: { id: companyId } },
+    });
+  }
+
+  async findProductsInList(listId: UUID) {
+    return this.productListRepository.find({
+      where: { id: listId },
+      relations: ['products'],
     });
   }
 
@@ -52,13 +64,9 @@ export class ProductService {
     }
   }
 
-  // GS1
-  async searchProductsByGS1(searchProductsDto: Gs1SearchProductsDto) {
-    const { name, brand } = searchProductsDto;
-
-    if (name == undefined && brand == undefined) {
-      return [];
-    }
+  // SEARCH PRODUCT
+  async searchProduct(companyId: UUID, searchProductsDto: PrdouctInlistDto) {
+    const { name, brand, netContent } = searchProductsDto;
 
     const queryBuilder = this.productRepository.createQueryBuilder('product');
 
@@ -74,29 +82,82 @@ export class ProductService {
       });
     }
 
+    if (netContent) {
+      queryBuilder.andWhere('product.net_content = :netContent', {
+        netContent: netContent,
+      });
+    }
+
+    if (netContent) {
+      queryBuilder.andWhere('product.net_content = :netContent', {
+        netContent: netContent,
+      });
+    }
+
+    queryBuilder.andWhere('product.company_id = :companyId', { companyId });
     const results = await queryBuilder.getMany();
     return results;
-  }
-
-  //PRODUCT
-  create(createProductDto: CreateProductDto) {
-    return 'This action adds a new product';
-  }
-
-  findAll() {
-    return `This action returns all product`;
   }
 
   findById(id: UUID) {
     return this.productRepository.findOne({ where: { id } });
   }
 
-  update(id: number, updateProductDto: UpdateProductDto) {
-    return `This action updates a #${id} product`;
-  }
+  async addProduct(productDto: Gs1ProductDto, companyId: UUID, listId: UUID) {
+    this.logger.log(`Adding product: ${JSON.stringify(productDto)}`);
 
-  remove(id: number) {
-    return `This action removes a #${id} product`;
+    // Transform product data
+    const productData = await this.productMapper.transformToEntity(productDto);
+
+    // Fetch related entities
+    const company = await this.companyRepository.findOne({
+      where: { id: companyId },
+    });
+    if (!company) {
+      throw new Error(`Company with ID ${companyId} not found`);
+    }
+
+    let productList = await this.productListRepository.findOne({
+      where: { id: listId },
+    });
+    if (!productList) {
+      this.logger.log(`ProductList with ID ${listId} not found`);
+
+      productList = await this.productListRepository.findOne({
+        where: { name: 'General' },
+      });
+
+      if (!productList) {
+        productList = this.productListRepository.create({ name: 'General' });
+        productList = await this.productListRepository.save(productList);
+      }
+    }
+
+    // Check if product already exists
+    let product = await this.productRepository.findOne({
+      where: { gtin: productDto.GTIN },
+    });
+
+    // if the GTIN already exists, we update the product with incoming data
+    if (product) {
+      this.logger.log(
+        `Product with GTIN ${productDto.GTIN} already exists. Updating product.`,
+      );
+      product = this.productRepository.merge(product, productData);
+    } else {
+      // Create new product
+      this.logger.log(
+        `Product with GTIN ${productDto.GTIN} does not exist. Creating new product.`,
+      );
+      product = this.productRepository.create(productData);
+    }
+
+    // Assign relations
+    product.company = company;
+    product.lists = [productList]; // Assuming a product can belong to multiple lists
+
+    // Save the product
+    return this.productRepository.save(product);
   }
 
   // Add the findByIds method

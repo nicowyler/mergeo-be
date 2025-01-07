@@ -17,9 +17,13 @@ import {
 
 @Entity()
 @Unique('UQ_PRODUCT_NAME', ['name', 'price', 'brand', 'net_content', 'company'])
+@Unique('UQ_PRODUCT_GTIN', ['gtin'])
 export class Product extends DateAudit {
   @PrimaryGeneratedColumn('uuid')
   id: UUID;
+
+  @Column({ nullable: false })
+  gtin: string;
 
   @Column({ nullable: false })
   name: string;

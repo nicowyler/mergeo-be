@@ -16,6 +16,7 @@ import { BullModule } from '@nestjs/bull';
 import { BuyOrderModule } from './modules/buy-order/buy-order.module';
 import { ServerSentEventsModule } from './modules/server-sent-events/server-sent-events.module';
 import { Gs1Module } from './modules/gs1/gs1.module';
+import { MockProductsService } from 'src/modules/product/mock-products.service';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { Gs1Module } from './modules/gs1/gs1.module';
     ServerSentEventsModule,
     Gs1Module,
   ],
+  providers: [MockProductsService],
 })
 export class AppModule {
   static port: number;

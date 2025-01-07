@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
-import { firstValueFrom, NotFoundError } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 import * as https from 'https';
 import * as fs from 'fs';
 
@@ -50,7 +50,7 @@ export class Gs1Service {
   async getToken(): Promise<string> {
     // Check if the token is expired
     if (this.isTokenExpired()) {
-      console.log('Token is expired, fetching a new one...');
+      this.logger.log('Token is expired, fetching a new one...');
       return this.fetchNewToken();
     }
     return this.token;
