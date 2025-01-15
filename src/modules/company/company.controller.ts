@@ -19,18 +19,24 @@ import {
 import { TransformInterceptor } from '../../interceptors/response.interceptor';
 import { ResponseMessage } from '../../decorators/response_message.decorator';
 import { AuthGuard } from '../../guards';
-import { CompanyService } from '../../modules/company/company.service';
-import { Branch } from '../../modules/company/branch.entity';
+import { Branch } from './entities/branch.entity';
 import { UUID } from 'crypto';
 import { ApiTags } from '@nestjs/swagger';
-import { Company } from './company.entity';
 import { ErrorMessages } from 'src/common/enum';
+import { Company } from 'src/modules/company/entities/company.entity';
+import { CompanyService } from 'src/modules/company/services/company.service';
+import { BranchService } from 'src/modules/company/services/branches.service';
+import { ClientBlackListService } from 'src/modules/company/services/blackList.service';
 
 @ApiTags('Companias')
 @UseInterceptors(TransformInterceptor)
 @Controller('company')
 export class CompanyController {
-  constructor(private readonly companyService: CompanyService) {}
+  constructor(
+    private readonly companyService: CompanyService,
+    private readonly branchService: BranchService,
+    private readonly clientBlackList: ClientBlackListService,
+  ) {}
 
   @Post()
   @UseGuards(AuthGuard)
@@ -50,6 +56,14 @@ export class CompanyController {
   @ResponseMessage('Compania encontrada!')
   async getCompany(@Param('id') id: UUID): Promise<Company> {
     const company = await this.companyService.getCompanyById(id);
+    return company;
+  }
+
+  @Get('/cuit/:cuit')
+  @UseGuards(AuthGuard)
+  @ResponseMessage('Compania encontrada!')
+  async getCompanyByCuit(@Param('cuit') cuit: number): Promise<Company> {
+    const company = await this.companyService.getCompanyByCuit(cuit);
     return company;
   }
 
@@ -73,7 +87,7 @@ export class CompanyController {
     @Param('id') id: UUID,
     @Body() body: CreateBranchDto,
   ): Promise<CreateBranchResponseDto> {
-    const branch = await this.companyService.createBranch(id, body);
+    const branch = await this.branchService.createBranch(id, body);
     return branch;
   }
 
@@ -82,7 +96,7 @@ export class CompanyController {
   @UseGuards(AuthGuard)
   @ResponseMessage('Sucursales encontradas con exito!')
   async getBranches(@Param('id') id: UUID): Promise<BranchesResponseDto> {
-    const branches = await this.companyService.getBranches(id);
+    const branches = await this.branchService.getBranches(id);
     return branches;
   }
 
@@ -93,7 +107,7 @@ export class CompanyController {
     @Param('id') id: UUID,
     @Body() body: any,
   ): Promise<Branch> {
-    const branch = await this.companyService.updateBranch(id, body);
+    const branch = await this.branchService.updateBranch(id, body);
     return branch;
   }
 
@@ -101,7 +115,22 @@ export class CompanyController {
   @UseGuards(AuthGuard)
   @ResponseMessage('Sucursal borrada con exito!')
   async deleteBranch(@Param('id') branchId: UUID): Promise<void> {
-    await this.companyService.deleteBranch(branchId);
+    await this.branchService.deleteBranch(branchId);
     return;
+  }
+
+  // BLACKLIST
+  @Post('/blacklist/:companyId')
+  @UseGuards(AuthGuard)
+  @ResponseMessage('Producto agregado a la blacklist con exito!')
+  async addProductToBlackList(@Param('companyId') companyId: UUID) {
+    return this.clientBlackList.add(companyId);
+  }
+
+  @Get('/blacklist/:companyId')
+  @UseGuards(AuthGuard)
+  @ResponseMessage('Clientes en la blacklist!')
+  async getBlackList(@Param('companyId') companyId: UUID) {
+    return this.clientBlackList.find(companyId);
   }
 }

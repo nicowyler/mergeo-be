@@ -4,15 +4,11 @@ import { BullModule } from '@nestjs/bull';
 import { PreOrderController } from './pre-order.controller';
 import { PreOrderService } from './pre-order.service';
 import { PreOrderProcessor } from './pre-order.processor';
-import { CompanyService } from 'src/modules/company/company.service';
 import { PreOrder } from 'src/modules/pre-order/entities/pre-order.entity';
-import { Company } from 'src/modules/company/company.entity';
 import { Product } from 'src/modules/product/entities/product.entity';
 import { User } from 'src/modules/user/user.entity';
 import { UserService } from 'src/modules/user/user.service';
-import { ProductService } from 'src/modules/product/product.service';
-import { Branch } from 'src/modules/company/branch.entity';
-import { Address } from 'src/modules/company/address.entity';
+import { Branch } from 'src/modules/company/entities/branch.entity';
 import { Permission } from 'src/modules/role/permission.entity';
 import { Roles } from 'src/modules/role/role.entity';
 import { RoleService } from 'src/modules/role/role.service';
@@ -25,8 +21,12 @@ import { BuyOrderService } from 'src/modules/buy-order/buy-order.service';
 import { BuyOrder } from 'src/modules/buy-order/entities/buy-order.entity';
 import { BuyOrderModule } from 'src/modules/buy-order/buy-order.module';
 import { BuyOrderProduct } from 'src/modules/buy-order/entities/buy-order-product.entity';
-import { ProductList } from 'src/modules/product/entities/productList.entity';
+import { ProductList } from 'src/modules/product/entities/product-list.entity';
 import { ProductModule } from 'src/modules/product/product.module';
+import { Company } from 'src/modules/company/entities/company.entity';
+import { Address } from 'src/modules/company/entities/address.entity';
+import { ClientBlackList } from 'src/modules/company/entities/client-black-list.entity';
+import { CompanyService } from 'src/modules/company/services/company.service';
 
 @Module({
   imports: [
@@ -46,6 +46,7 @@ import { ProductModule } from 'src/modules/product/product.module';
       Roles,
       BuyOrder,
       BuyOrderProduct,
+      ClientBlackList,
     ]),
     BullModule.registerQueue({
       name: 'preorder', // Queue name for pre-order jobs

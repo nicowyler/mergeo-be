@@ -5,18 +5,14 @@ import {
 } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Company } from '../company.entity';
 import { PickUpPointDto, UpdatePickUpPoint } from '../dto';
 import { ErrorMessages } from '../../../common/enum/errorMessages.enum';
 import { UUID } from 'crypto';
-import {
-  convertCoordinatesForPostGIS,
-  transformLocationToPolygon,
-} from 'src/common/utils/postGis.utils';
+import { convertCoordinatesForPostGIS } from 'src/common/utils/postGis.utils';
 import { PickUpPoint } from 'src/modules/company/pickUpPoints/pickUpPoint.entity';
-import { Address } from 'src/modules/company/address.entity';
 import { PickUpSchedule } from 'src/modules/company/pickUpPoints/pickUpSchedule.entity';
-import { plainToClass } from 'class-transformer';
+import { Company } from 'src/modules/company/entities/company.entity';
+import { Address } from 'src/modules/company/entities/address.entity';
 
 @Injectable()
 export class PickUpPointService {

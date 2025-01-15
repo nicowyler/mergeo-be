@@ -7,13 +7,13 @@ import {
   OneToOne,
   JoinColumn,
 } from 'typeorm';
-import { Company } from 'src/modules/company/company.entity';
 import { UUID } from 'crypto';
 import { PreOrderProduct } from 'src/modules/pre-order/entities/pre-order-product.entity';
 import { PreOrderCriteria } from 'src/modules/pre-order/entities/pre-order-criterias.entity';
 import { DateAudit } from 'src/common/entities/base.entity';
 import { PRE_ORDER_STATUS } from 'src/common/enum/preOrder.enum';
 import { BuyOrder } from 'src/modules/buy-order/entities/buy-order.entity';
+import { Company } from 'src/modules/company/entities/company.entity';
 
 @Entity()
 export class PreOrder extends DateAudit {

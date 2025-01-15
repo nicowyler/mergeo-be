@@ -1,6 +1,6 @@
 import { UUID } from 'crypto';
 import { DateAudit } from 'src/common/entities/base.entity';
-import { Company } from 'src/modules/company/company.entity';
+import { Company } from 'src/modules/company/entities/company.entity';
 import { Product } from 'src/modules/product/entities/product.entity';
 import {
   Column,
@@ -19,6 +19,12 @@ export class ProductList extends DateAudit {
 
   @Column()
   name: string;
+
+  @Column({ nullable: true })
+  description: string;
+
+  @Column({ nullable: true })
+  discount: number;
 
   @ManyToOne(() => Company, (company) => company.productLists, {
     nullable: false,

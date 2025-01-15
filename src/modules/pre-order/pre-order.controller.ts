@@ -7,6 +7,7 @@ import {
   Query,
   Request,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { PreOrderService } from './pre-order.service';
 import {
@@ -17,8 +18,10 @@ import { UUID } from 'crypto';
 import { PreOrderProcessor } from 'src/modules/pre-order/pre-order.processor';
 import { PRE_ORDER_STATUS } from 'src/common/enum/preOrder.enum';
 import { AuthGuard } from 'src/guards';
+import { TransformInterceptor } from 'src/interceptors/response.interceptor';
 
 @Controller('preorder')
+@UseInterceptors(TransformInterceptor)
 export class PreOrderController {
   constructor(
     private readonly preOrderService: PreOrderService,

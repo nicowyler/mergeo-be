@@ -16,7 +16,6 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { WhatsApp } from '../../common/enum/email.enum';
 import { Permission } from '../../modules/role/permission.entity';
-import { Company } from '../../modules/company/company.entity';
 import { User } from './user.entity';
 import { RoleService } from '../role/role.service';
 import {
@@ -24,11 +23,12 @@ import {
   ResponseCreateRoleDto,
 } from 'src/modules/role/dto/role.dto';
 import { plainToInstance } from 'class-transformer';
-import { CompanyService } from 'src/modules/company/company.service';
 import { AddUserDto } from 'src/modules/auth/dto';
 import { passwordGen } from 'src/common/utils';
 import { Roles } from 'src/modules/role/role.entity';
 import { UUID } from 'crypto';
+import { Company } from 'src/modules/company/entities/company.entity';
+import { CompanyService } from 'src/modules/company/services/company.service';
 
 @Injectable()
 export class UserService {

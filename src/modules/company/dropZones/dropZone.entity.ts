@@ -9,8 +9,8 @@ import {
   Polygon,
   Index,
 } from 'typeorm';
-import { Company } from '../company.entity';
 import { DropZoneSchedule } from 'src/modules/company/dropZones/dropZoneSchedule.entity';
+import { Company } from 'src/modules/company/entities/company.entity';
 
 @Entity()
 @Unique('UQ_DZ_NAME', ['name', 'company']) // Composite unique constraint for name and company

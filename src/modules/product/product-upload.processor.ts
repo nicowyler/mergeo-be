@@ -1,7 +1,7 @@
 import { Process, Processor } from '@nestjs/bull';
 import { Job } from 'bull';
 import { Injectable } from '@nestjs/common';
-import { ProductService } from './product.service';
+import { ProductService } from './services/product.service';
 import { Gs1Service } from 'src/modules/gs1/gs1.service';
 import { ProductQueueJobType } from 'src/modules/product/product.queue';
 

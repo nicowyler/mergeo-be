@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Gs1ProductDto } from 'src/modules/product/dto/gs1-product.dto';
 import { Product } from 'src/modules/product/entities/product.entity';
-import { UnitService } from 'src/modules/product/unitsMapper.service';
+import { UnitService } from 'src/modules/product/services/unitsMapper.service';
 
 @Injectable()
 export class ProductMapper {

@@ -9,7 +9,7 @@ import { In, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { BuyOrderProduct } from 'src/modules/buy-order/entities/buy-order-product.entity';
 import { UUID } from 'crypto';
-import { Branch } from 'src/modules/company/branch.entity';
+import { Branch } from 'src/modules/company/entities/branch.entity';
 import {
   SERVER_SENT_EVENT,
   SERVER_SENT_EVENTS,

@@ -9,8 +9,8 @@ import {
   IsOptional,
   IsString,
 } from 'class-validator';
-import { Address } from 'src/modules/company/address.entity';
-import { Branch } from 'src/modules/company/branch.entity';
+import { Address } from 'src/modules/company/entities/address.entity';
+import { Branch } from 'src/modules/company/entities/branch.entity';
 
 export class CreateBranchDto {
   @ApiProperty()

@@ -1,15 +1,14 @@
 import {
   Column,
   Entity,
-  JoinTable,
   ManyToMany,
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { DateAudit } from '../../common/entities/base.entity';
-import { Company } from '../company/company.entity';
 import { ACCOUNT_TYPE } from '../../common/enum';
 import { Roles } from '../role/role.entity';
+import { Company } from 'src/modules/company/entities/company.entity';
 
 @Entity()
 export class User extends DateAudit {

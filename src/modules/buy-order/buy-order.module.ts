@@ -3,13 +3,13 @@ import { BuyOrderService } from './buy-order.service';
 import { BuyOrderController } from './buy-order.controller';
 import { PreOrder } from 'src/modules/pre-order/entities/pre-order.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Company } from 'src/modules/company/company.entity';
 import { PreOrderProduct } from 'src/modules/pre-order/entities/pre-order-product.entity';
 import { Product } from 'src/modules/product/entities/product.entity';
 import { User } from 'src/modules/user/user.entity';
 import { BuyOrder } from 'src/modules/buy-order/entities/buy-order.entity';
 import { BuyOrderProduct } from 'src/modules/buy-order/entities/buy-order-product.entity';
-import { Branch } from 'src/modules/company/branch.entity';
+import { Branch } from 'src/modules/company/entities/branch.entity';
+import { Company } from 'src/modules/company/entities/company.entity';
 
 @Module({
   imports: [

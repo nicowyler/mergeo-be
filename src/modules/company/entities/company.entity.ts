@@ -5,15 +5,18 @@ import {
   OneToMany,
   Unique,
 } from 'typeorm';
-import { DateAudit } from '../../common/entities/base.entity';
-import { Branch } from '../../modules/company/branch.entity';
-import { User } from '../../modules/user/user.entity';
 import { PickUpPoint } from 'src/modules/company/pickUpPoints/pickUpPoint.entity';
 import { DropZone } from 'src/modules/company/dropZones/dropZone.entity';
 import { Product } from 'src/modules/product/entities/product.entity';
 import { PreOrder } from 'src/modules/pre-order/entities/pre-order.entity';
 import { UUID } from 'crypto';
-import { ProductList } from 'src/modules/product/entities/productList.entity';
+import { ProductList } from 'src/modules/product/entities/product-list.entity';
+import { DateAudit } from 'src/common/entities/base.entity';
+import { User } from 'src/modules/user/user.entity';
+import { Branch } from 'src/modules/company/entities/branch.entity';
+import { BlackList } from 'src/modules/product/entities/black-list.entity';
+import { FavoriteList } from 'src/modules/product/entities/favorite-list.entity';
+import { ClientBlackList } from 'src/modules/company/entities/client-black-list.entity';
 
 @Entity()
 @Unique('UQ_BUSINESS_NAME', ['razonSocial'])
@@ -61,4 +64,22 @@ export class Company extends DateAudit {
 
   @OneToMany(() => ProductList, (productList) => productList.company)
   productLists: ProductList[];
+
+  // Add blacklist relation
+  @OneToMany(() => BlackList, (blackList) => blackList.company, {
+    cascade: true,
+  })
+  blackLists: BlackList[];
+
+  // Add favoriteList relation
+  @OneToMany(() => FavoriteList, (favoriteList) => favoriteList.company, {
+    cascade: true,
+  })
+  favoriteLists: FavoriteList[];
+
+  @OneToMany(
+    () => ClientBlackList,
+    (clientBlackList) => clientBlackList.company,
+  )
+  clientBlackLists: ClientBlackList[];
 }

@@ -5,7 +5,6 @@ import {
 } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Company } from '../company.entity';
 import { ErrorMessages } from '../../../common/enum/errorMessages.enum';
 import { UUID } from 'crypto';
 import { DropZone } from 'src/modules/company/dropZones/dropZone.entity';
@@ -14,6 +13,7 @@ import {
   DropZoneDto,
   UpdateDropZoneDto,
 } from 'src/modules/company/dto/DropZone.dto';
+import { Company } from 'src/modules/company/entities/company.entity';
 
 @Injectable()
 export class DropZoneService {

@@ -1,3 +1,5 @@
+import { Address } from 'src/modules/company/entities/address.entity';
+import { Company } from 'src/modules/company/entities/company.entity';
 import {
   Entity,
   Column,
@@ -7,8 +9,6 @@ import {
   OneToOne,
   JoinColumn,
 } from 'typeorm';
-import { Company } from './company.entity';
-import { Address } from 'src/modules/company/address.entity';
 
 @Entity()
 @Unique('UQ_NAME', ['name', 'company'])

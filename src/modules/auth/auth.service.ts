@@ -16,10 +16,10 @@ import {
   RegisterUserDto,
   UserDto,
 } from '../../modules/auth/dto';
-import { CompanyService } from '../../modules/company/company.service';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { RoleService } from 'src/modules/role/role.service';
+import { CompanyService } from 'src/modules/company/services/company.service';
 
 @Injectable()
 export class AuthService {

@@ -9,8 +9,7 @@ import { PreOrder } from './entities/pre-order.entity';
 import { CartProductDto, CreatePreOrderDto } from './dto/create-pre-order.dto';
 import { Product } from 'src/modules/product/entities/product.entity';
 import { UUID } from 'crypto';
-import { Company } from 'src/modules/company/company.entity';
-import { ProductService } from 'src/modules/product/product.service';
+import { ProductService } from 'src/modules/product/services/product.service';
 import { User } from 'src/modules/user/user.entity';
 import { PreOrderProduct } from 'src/modules/pre-order/entities/pre-order-product.entity';
 import { PreOrderCriteria } from 'src/modules/pre-order/entities/pre-order-criterias.entity';
@@ -24,6 +23,7 @@ import {
 } from 'src/common/enum/serverSentEvents.enum';
 import { TypedEventEmitter } from 'src/modules/event-emitter/typed-event-emitter.class';
 import { ReplacementCriteria } from 'src/common/enum/replacementCriteria.enum';
+import { Company } from 'src/modules/company/entities/company.entity';
 
 const preOrderConfig = {
   retryLimit: 3,

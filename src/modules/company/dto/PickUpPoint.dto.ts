@@ -9,7 +9,7 @@ import {
   IsOptional,
   IsString,
 } from 'class-validator';
-import { Address } from 'src/modules/company/address.entity';
+import { Address } from 'src/modules/company/entities/address.entity';
 import { PickUpSchedule } from 'src/modules/company/pickUpPoints/pickUpSchedule.entity';
 
 export class PickUpPointDto {

@@ -1,5 +1,4 @@
-import { Branch } from 'src/modules/company/branch.entity';
-import { Company } from '../../modules/company/company.entity';
+import { Branch } from 'src/modules/company/entities/branch.entity';
 import {
   Column,
   Entity,

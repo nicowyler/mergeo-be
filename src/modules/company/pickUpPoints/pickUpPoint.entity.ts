@@ -8,9 +8,9 @@ import {
   JoinColumn,
   OneToMany,
 } from 'typeorm';
-import { Company } from '../company.entity';
 import { PickUpSchedule } from 'src/modules/company/pickUpPoints/pickUpSchedule.entity';
-import { Address } from 'src/modules/company/address.entity';
+import { Address } from 'src/modules/company/entities/address.entity';
+import { Company } from 'src/modules/company/entities/company.entity';
 
 @Entity()
 @Unique('UQ_PP_NAME', ['name'])

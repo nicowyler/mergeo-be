@@ -6,7 +6,7 @@ import {
   IsString,
   IsUUID,
 } from 'class-validator';
-import { Branch } from 'src/modules/company/branch.entity';
+import { Branch } from 'src/modules/company/entities/branch.entity';
 
 export class CreateCompanyDto {
   @ApiProperty()

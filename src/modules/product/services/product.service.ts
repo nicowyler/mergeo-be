@@ -1,18 +1,20 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Product } from 'src/modules/product/entities/product.entity';
-import { In, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Branch } from 'src/modules/company/branch.entity';
+import { Branch } from 'src/modules/company/entities/branch.entity';
 import { SearchProductsDto } from 'src/modules/product/dto/search-products.dto';
 import { getConvertedPricePerUnit } from 'src/modules/product/utils';
 import { UUID } from 'crypto';
-import { ProductList } from 'src/modules/product/entities/productList.entity';
+import { ProductList } from 'src/modules/product/entities/product-list.entity';
 import { CreateProductsListDto } from 'src/modules/product/dto/create-productsList.dto';
-import { Company } from 'src/modules/company/company.entity';
+import { Company } from 'src/modules/company/entities/company.entity';
 import { PrdouctInlistDto } from 'src/modules/product/dto/prdouct-in-list.dto';
-import { MockProductsService } from 'src/modules/product/mock-products.service';
 import { ProductMapper } from 'src/modules/product/productMapper';
 import { Gs1ProductDto } from 'src/modules/product/dto/gs1-product.dto';
+import { FavoriteList } from 'src/modules/product/entities/favorite-list.entity';
+import { BlackList } from 'src/modules/product/entities/black-list.entity';
+import { ClientBlackList } from 'src/modules/company/entities/client-black-list.entity';
 
 @Injectable()
 export class ProductService {
@@ -25,24 +27,32 @@ export class ProductService {
     private readonly productListRepository: Repository<ProductList>,
     @InjectRepository(Company)
     private readonly companyRepository: Repository<Company>,
-    private readonly mockProductsService: MockProductsService,
+    @InjectRepository(FavoriteList)
+    private readonly favoriteListRepository: Repository<FavoriteList>,
+    @InjectRepository(BlackList)
+    private readonly blackListRepository: Repository<BlackList>,
+    @InjectRepository(ClientBlackList)
+    private readonly clientBlackListRepository: Repository<ClientBlackList>,
     private readonly productMapper: ProductMapper,
   ) {}
 
   // PRODUCTS LISTS
-  async findLists(companyId: UUID) {
+  // Provider uses this to get the lists of products
+  async getLists(companyId: UUID) {
     return this.productListRepository.find({
       where: { company: { id: companyId } },
     });
   }
 
-  async findProductsInList(listId: UUID) {
+  // get products from a list
+  async getProductsFromList(listId: UUID) {
     return this.productListRepository.find({
       where: { id: listId },
       relations: ['products'],
     });
   }
 
+  // create a new list
   async createList(body: CreateProductsListDto) {
     try {
       const { name, companyId } = body;
@@ -64,7 +74,9 @@ export class ProductService {
     }
   }
 
-  // SEARCH PRODUCT
+  // PROVIDER - SEARCH PRODUCT
+  // search products by name, brand, and netContent
+  // This is used by the provider to search for products in their inventory
   async searchProduct(companyId: UUID, searchProductsDto: PrdouctInlistDto) {
     const { name, brand, netContent } = searchProductsDto;
 
@@ -103,6 +115,7 @@ export class ProductService {
     return this.productRepository.findOne({ where: { id } });
   }
 
+  // ADD PRODUCT
   async addProduct(productDto: Gs1ProductDto, companyId: UUID, listId: UUID) {
     this.logger.log(`Adding product: ${JSON.stringify(productDto)}`);
 
@@ -158,21 +171,6 @@ export class ProductService {
 
     // Save the product
     return this.productRepository.save(product);
-  }
-
-  // Add the findByIds method
-  async findByIds(productIds: UUID[]): Promise<Product[]> {
-    if (!productIds || productIds.length === 0) {
-      return [];
-    }
-
-    // Use find with where clause to match multiple IDs
-    return await this.productRepository.find({
-      where: {
-        id: In(productIds),
-      },
-      relations: ['company'], // Include the company relation
-    });
   }
 
   // Search function using the conversion logic
@@ -316,8 +314,24 @@ export class ProductService {
     // Combine results from both queries
     const combinedProducts = [...dropZoneProducts, ...pickUpProducts];
 
-    // Filter combined results by name and brand
-    let filteredProducts = combinedProducts;
+    // Filter products based on blacklist
+    const blackListedProducts = await this.blackListRepository
+      .createQueryBuilder('blackList')
+      .leftJoinAndSelect('blackList.products', 'product')
+      .getMany();
+
+    const blackListedProductIds = blackListedProducts.flatMap((bl) =>
+      bl.products.map((p) => p.id),
+    );
+
+    const blackListedCompanies = await this.clientBlackListRepository.find();
+    const blackListedCompanyIds = blackListedCompanies.map((bl) => bl.id);
+
+    let filteredProducts = combinedProducts.filter(
+      (product) =>
+        !blackListedProductIds.includes(product.id) &&
+        !blackListedCompanyIds.includes(product.companyId),
+    );
 
     if (name) {
       filteredProducts = filteredProducts.filter((product) =>
@@ -361,5 +375,57 @@ export class ProductService {
 
     // Optionally, you can return the count along with the sorted products
     return { count: productCount, products: sortedProducts };
+  }
+
+  /* -------------------------------------------
+  Favorites and Blacklists
+  ----------------------------------------- */
+
+  async addProductToBlackList(companyId: UUID, productId: UUID): Promise<void> {
+    const company = await this.companyRepository.findOne({
+      where: { id: companyId },
+    });
+    const product = await this.productRepository.findOne({
+      where: { id: productId },
+    });
+
+    if (!company || !product) {
+      throw new Error('Company or Product not found');
+    }
+
+    let blackList = await this.blackListRepository.findOne({
+      where: { company: company },
+    });
+    if (!blackList) {
+      blackList = this.blackListRepository.create({ company: company });
+    }
+
+    blackList.products.push(product);
+    await this.blackListRepository.save(blackList);
+  }
+
+  async getNetContentsWithPrices(
+    productId: UUID,
+  ): Promise<{ netContent: number; price: number }[]> {
+    const product = await this.productRepository.findOne({
+      where: { id: productId },
+    });
+
+    if (!product) {
+      throw new Error('Product not found');
+    }
+
+    const netContentsWithPrices = await this.productRepository
+      .createQueryBuilder('product')
+      .select('product.net_content', 'netContent')
+      .addSelect('product.price', 'price')
+      .where('product.name = :productName', { productName: product.name })
+      .andWhere('product.brand = :productBrand', {
+        productBrand: product.brand,
+      })
+      .groupBy('product.net_content, product.price')
+      .getRawMany();
+
+    return netContentsWithPrices;
   }
 }

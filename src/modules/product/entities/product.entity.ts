@@ -1,9 +1,9 @@
 import { UUID } from 'crypto';
 import { DateAudit } from 'src/common/entities/base.entity';
 import { BuyOrderProduct } from 'src/modules/buy-order/entities/buy-order-product.entity';
-import { Company } from 'src/modules/company/company.entity';
+import { Company } from 'src/modules/company/entities/company.entity';
 import { PreOrderProduct } from 'src/modules/pre-order/entities/pre-order-product.entity';
-import { ProductList } from 'src/modules/product/entities/productList.entity';
+import { ProductList } from 'src/modules/product/entities/product-list.entity';
 import {
   Column,
   Entity,
@@ -46,7 +46,7 @@ export class Product extends DateAudit {
   @Column({ nullable: true })
   variety: string;
 
-  @Column({ nullable: true })
+  @Column('decimal', { nullable: true })
   net_content: number;
 
   @Column({ nullable: true })

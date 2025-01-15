@@ -8,13 +8,14 @@ import { TypedEventEmitter } from '../../modules/event-emitter/typed-event-emitt
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from '../user/user.entity';
 import { Permission } from '../../modules/role/permission.entity';
-import { CompanyService } from '../../modules/company/company.service';
-import { Company } from '../../modules/company/company.entity';
-import { Branch } from '../../modules/company/branch.entity';
+import { Branch } from '../company/entities/branch.entity';
 import { RoleService } from 'src/modules/role/role.service';
 import { Roles } from 'src/modules/role/role.entity';
 import { HttpModule } from '@nestjs/axios';
-import { Address } from 'src/modules/company/address.entity';
+import { Company } from 'src/modules/company/entities/company.entity';
+import { Address } from 'src/modules/company/entities/address.entity';
+import { ClientBlackList } from 'src/modules/company/entities/client-black-list.entity';
+import { CompanyService } from 'src/modules/company/services/company.service';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { Address } from 'src/modules/company/address.entity';
       Permission,
       Roles,
       Address,
+      ClientBlackList,
     ]),
     AuthProvider,
     HttpModule,
