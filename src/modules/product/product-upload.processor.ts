@@ -22,10 +22,15 @@ export class ProductProcessor {
     private readonly eventEmitter: TypedEventEmitter,
   ) {}
 
-  async onProductChange(gtin: string, providerId: UUID) {
+  async onProductChange(
+    gtin: string,
+    providerId: UUID,
+    upload_percent: number,
+  ) {
     this.eventEmitter.emit(SERVER_SENT_EVENT, {
       gtin,
       providerId,
+      upload_percent,
       message: SERVER_SENT_EVENTS.productsUploadSuccess,
     });
     this.logger.log(`Product with ${gtin}, uploaded to client ${providerId}`);
@@ -33,11 +38,11 @@ export class ProductProcessor {
 
   @Process('products-upload')
   async handleProductJob(job: Job<ProductQueueJobType>) {
-    const { gtin, price, companyId, listId } = job.data;
+    const { gtin, price, companyId, listId, upload_percent } = job.data;
     try {
       const productData = await this.gs1Service.getProductByGTIN(gtin);
       productData.price = price;
-      this.onProductChange(gtin, companyId); // Emit the event
+      this.onProductChange(gtin, companyId, upload_percent); // Emit the event
       await this.productService.addProduct(productData, companyId, listId);
     } catch (error) {
       console.error(`Error processing GTIN ${gtin}:`, error);

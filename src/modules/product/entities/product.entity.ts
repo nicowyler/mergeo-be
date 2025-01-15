@@ -16,7 +16,6 @@ import {
 } from 'typeorm';
 
 @Entity()
-@Unique('UQ_PRODUCT_NAME', ['name', 'price', 'brand', 'net_content', 'company'])
 @Unique('UQ_PRODUCT_GTIN', ['gtin'])
 export class Product extends DateAudit {
   @PrimaryGeneratedColumn('uuid')

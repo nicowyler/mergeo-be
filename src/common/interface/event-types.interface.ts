@@ -40,6 +40,7 @@ export interface EventPayloads {
     clientId?: UUID;
     providerId?: UUID;
     gtin?: string;
+    upload_percent?: number;
     message: string;
   };
 }

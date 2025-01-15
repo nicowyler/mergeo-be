@@ -378,33 +378,6 @@ export class ProductService {
     return { count: productCount, products: sortedProducts };
   }
 
-  /* -------------------------------------------
-  Favorites and Blacklists
-  ----------------------------------------- */
-
-  async addProductToBlackList(companyId: UUID, productId: UUID): Promise<void> {
-    const company = await this.companyRepository.findOne({
-      where: { id: companyId },
-    });
-    const product = await this.productRepository.findOne({
-      where: { id: productId },
-    });
-
-    if (!company || !product) {
-      throw new Error('Company or Product not found');
-    }
-
-    let blackList = await this.blackListRepository.findOne({
-      where: { company: company },
-    });
-    if (!blackList) {
-      blackList = this.blackListRepository.create({ company: company });
-    }
-
-    blackList.products.push(product);
-    await this.blackListRepository.save(blackList);
-  }
-
   async getNetContentsWithPrices(productId: UUID): Promise<Product[]> {
     const product = await this.productRepository.findOne({
       where: { id: productId },
@@ -416,15 +389,11 @@ export class ProductService {
 
     const products = await this.productRepository
       .createQueryBuilder('product')
-      // .select(['product', 'MIN(product.price) AS minPrice'])
-      .where('product.name = :productName', { productName: product.name })
-      .andWhere('product.brand = :productBrand', {
-        productBrand: product.brand,
-      })
+      .where('product.name = :name', { name: product.name })
+      .andWhere('product.brand = :brand', { brand: product.brand })
       .groupBy('product.id')
       .addGroupBy('product.net_content')
       .orderBy('product.net_content')
-      // .addOrderBy('minPrice')
       .getRawMany();
 
     // Filter to get the product with the best price for each net_content

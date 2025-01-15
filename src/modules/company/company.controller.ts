@@ -133,4 +133,11 @@ export class CompanyController {
   async getBlackList(@Param('companyId') companyId: UUID) {
     return this.clientBlackList.find(companyId);
   }
+
+  @Post('/blacklist/:companyId/remove')
+  @UseGuards(AuthGuard)
+  @ResponseMessage('Removido de la blacklist!')
+  async removeFormBlackList(@Param('companyId') companyId: UUID) {
+    return this.clientBlackList.remove(companyId);
+  }
 }
