@@ -15,6 +15,7 @@ import { Gs1ProductDto } from 'src/modules/product/dto/gs1-product.dto';
 import { FavoriteList } from 'src/modules/product/entities/favorite-list.entity';
 import { BlackList } from 'src/modules/product/entities/black-list.entity';
 import { ClientBlackList } from 'src/modules/company/entities/client-black-list.entity';
+import { name } from 'ejs';
 
 @Injectable()
 export class ProductService {
@@ -404,9 +405,7 @@ export class ProductService {
     await this.blackListRepository.save(blackList);
   }
 
-  async getNetContentsWithPrices(
-    productId: UUID,
-  ): Promise<{ netContent: number; price: number }[]> {
+  async getNetContentsWithPrices(productId: UUID): Promise<Product[]> {
     const product = await this.productRepository.findOne({
       where: { id: productId },
     });
@@ -415,17 +414,36 @@ export class ProductService {
       throw new Error('Product not found');
     }
 
-    const netContentsWithPrices = await this.productRepository
+    const products = await this.productRepository
       .createQueryBuilder('product')
-      .select('product.net_content', 'netContent')
-      .addSelect('product.price', 'price')
+      // .select(['product', 'MIN(product.price) AS minPrice'])
       .where('product.name = :productName', { productName: product.name })
       .andWhere('product.brand = :productBrand', {
         productBrand: product.brand,
       })
-      .groupBy('product.net_content, product.price')
+      .groupBy('product.id')
+      .addGroupBy('product.net_content')
+      .orderBy('product.net_content')
+      // .addOrderBy('minPrice')
       .getRawMany();
 
-    return netContentsWithPrices;
+    // Filter to get the product with the best price for each net_content
+    const bestPriceProducts = products.reduce((acc, curr) => {
+      const existingProduct = acc.find(
+        (p) => p.product_net_content === curr.product_net_content,
+      );
+      if (
+        !existingProduct ||
+        parseFloat(curr.minPrice) < parseFloat(existingProduct.minPrice)
+      ) {
+        acc = acc.filter(
+          (p) => p.product_net_content !== curr.product_net_content,
+        );
+        acc.push(curr);
+      }
+      return acc;
+    }, []);
+
+    return bestPriceProducts;
   }
 }

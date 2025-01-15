@@ -1,21 +1,33 @@
-import { Controller, Post, Param, Sse, MessageEvent } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Param,
+  Sse,
+  MessageEvent,
+  Logger,
+} from '@nestjs/common';
 import { UUID } from 'crypto';
 import { filter, fromEvent, map, Observable } from 'rxjs';
-import { OrderStatusUpdate } from 'src/modules/buy-order/buy-order.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   SERVER_SENT_EVENT,
   SERVER_SENT_EVENTS,
 } from 'src/common/enum/serverSentEvents.enum';
+import {
+  OrderStatusUpdate,
+  ProductUploadUpdate,
+} from 'src/modules/server-sent-events/event.types';
 
 @Controller('server-sent-events')
 export class ServerSentEventsController {
+  private readonly logger = new Logger(ServerSentEventsController.name);
+
   constructor(private readonly eventEmitter: EventEmitter2) {}
   @Sse('client/:id')
   sendClientOrderStatusUpdates(
     @Param('id') clientId: UUID,
   ): Observable<MessageEvent> {
-    console.log(`Subscribing to SSE for client ${clientId}`);
+    this.logger.log(`Subscribing to SSE for client ${clientId}`);
 
     return fromEvent(this.eventEmitter, SERVER_SENT_EVENT).pipe(
       filter((event: OrderStatusUpdate) => event.clientId === clientId),
@@ -29,10 +41,24 @@ export class ServerSentEventsController {
   sendProviderOrderStatusUpdates(
     @Param('id') providerId: UUID,
   ): Observable<MessageEvent> {
-    console.log(`Subscribing to SSE for client ${providerId}`);
+    this.logger.log(`Subscribing to SSE for client ${providerId}`);
 
     return fromEvent(this.eventEmitter, SERVER_SENT_EVENT).pipe(
       filter((event: OrderStatusUpdate) => event.providerId === providerId),
+      map((payload) => ({
+        data: payload,
+      })),
+    );
+  }
+
+  @Sse('provider/productUpload/:id')
+  sendProviderProductsUploadUpdates(
+    @Param('id') providerId: UUID,
+  ): Observable<MessageEvent> {
+    this.logger.log(`Subscribing to SSE for client ${providerId}`);
+
+    return fromEvent(this.eventEmitter, SERVER_SENT_EVENT).pipe(
+      filter((event: ProductUploadUpdate) => event.providerId === providerId),
       map((payload) => ({
         data: payload,
       })),

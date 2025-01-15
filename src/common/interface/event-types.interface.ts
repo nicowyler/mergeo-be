@@ -37,8 +37,9 @@ export interface EventPayloads {
 
   'sse.event': {
     orderId?: UUID;
-    clientId: UUID;
-    providerId: UUID;
+    clientId?: UUID;
+    providerId?: UUID;
+    gtin?: string;
     message: string;
   };
 }

@@ -8,6 +8,7 @@ import {
   UseInterceptors,
   UploadedFile,
   Logger,
+  UnsupportedMediaTypeException,
 } from '@nestjs/common';
 import { ProductService } from './services/product.service';
 import { SearchProductsDto } from 'src/modules/product/dto/search-products.dto';
@@ -24,6 +25,7 @@ import { TransformInterceptor } from 'src/interceptors/response.interceptor';
 import { ResponseMessage } from 'src/decorators/response_message.decorator';
 import { FavoritesService } from 'src/modules/product/services/favorits.service';
 import { BlackListService } from 'src/modules/product/services/blacklist.service';
+import { Not } from 'typeorm';
 
 @Controller('/product')
 @UseInterceptors(TransformInterceptor)
@@ -38,7 +40,7 @@ export class ProductController {
     private readonly gs1Service: Gs1Service,
   ) {}
 
-  // GS1 PRODUCTS SEARCH
+  // PROVIDER PRODUCTS SEARCH
   @Get('/search/:companyId')
   searchProductsByGS1(
     @Param('companyId') companyId: UUID,
@@ -48,6 +50,7 @@ export class ProductController {
     return this.productService.searchProduct(companyId, productSearch);
   }
 
+  // ADD SINGLE PRODUCT
   @Post('/add/:companyId/:listId?')
   @UseInterceptors(FileInterceptor('file'))
   async addSingleProduct(
@@ -64,26 +67,51 @@ export class ProductController {
 
   // UPLOAD PRODUCTS WITH EXCEL FILE
   @Post('/upload/:companyId/:listId?')
+  @ResponseMessage('Productos agregados a la cola con exito!')
   @UseInterceptors(FileInterceptor('file'))
   async uploadProductsFromExcel(
     @Param('companyId') companyId: UUID,
     @Param('listId') listId: UUID | null = null,
     @UploadedFile() file: Express.Multer.File,
   ): Promise<void> {
-    // Read the uploaded Excel file
-    const workbook = xlsx.read(file.buffer, { type: 'buffer' });
-    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+    try {
+      // Read the uploaded Excel file
+      const workbook = xlsx.read(file.buffer, { type: 'buffer' });
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
 
-    // Convert the sheet to JSON
-    const products: GtinProductDto[] = xlsx.utils.sheet_to_json(worksheet);
+      // Convert the sheet to JSON
+      // Get the headers and convert them to lowercase
+      const headers = (
+        xlsx.utils.sheet_to_json(worksheet, { header: 1 })[0] as string[]
+      ).map((header: string) => {
+        header = header.toLowerCase();
+        if (header === 'ean') return 'gtin';
+        return header;
+      });
 
-    // Add products to queue for processing
-    const params = {
-      products,
-      companyId,
-      listId,
-    };
-    await this.productQueueService.addProductsToQueue(params);
+      // Convert the sheet to JSON with lowercase headers
+      const products: GtinProductDto[] = xlsx.utils.sheet_to_json(worksheet, {
+        header: headers,
+        range: 1,
+      });
+
+      if (products.length === 0) {
+        throw new UnsupportedMediaTypeException(
+          "The uploaded file doesn't contain any products",
+        );
+      }
+
+      // Add products to queue for processing
+      const params = {
+        products,
+        companyId,
+        listId,
+      };
+      await this.productQueueService.addProductsToQueue(params);
+    } catch (error) {
+      this.logger.error('Error uploading products:', error);
+      throw error;
+    }
   }
 
   // PRODUCTS LISTS
@@ -102,7 +130,7 @@ export class ProductController {
     return this.productService.getLists(companyId);
   }
 
-  // PRODUCTS
+  // CLIENT SEARCH PRODUCTS
   @Get(':companyId')
   searchProducts(
     @Param('companyId') companyId: string,
@@ -112,6 +140,7 @@ export class ProductController {
   }
 
   // gets the net contents of a product with the prices
+  @ResponseMessage('Productos obtenidos con exito!')
   @Get('/net-contents/:productId')
   async getNetContentsWithPrices(@Param('productId') productId: UUID) {
     return this.productService.getNetContentsWithPrices(productId);

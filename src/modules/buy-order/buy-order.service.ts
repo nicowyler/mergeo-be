@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { CreateBuyOrderDto } from './dto/create-buy-order.dto';
@@ -24,15 +25,10 @@ import {
   UserDto,
 } from 'src/modules/buy-order/dto/find-buy-order.dto';
 
-export type OrderStatusUpdate = {
-  orderId: string; // UUID of the order
-  clientId: string; // UUID of the client
-  providerId: string; // UUID of the provider
-  message: string; // Status message (e.g., "Order Created")
-};
-
 @Injectable()
 export class BuyOrderService {
+  private readonly logger = new Logger(BuyOrderService.name);
+
   constructor(
     @InjectRepository(BuyOrder)
     private readonly buyOrderRepository: Repository<BuyOrder>,
@@ -64,7 +60,9 @@ export class BuyOrderService {
       message: SERVER_SENT_EVENTS.orderCreated,
     });
 
-    console.log('Emitting update');
+    this.logger.log(
+      `Order: ${orderId} has changed, client: ${clientId}, provider: ${providerId}`,
+    );
   }
 
   async createOrder(createBuyOrderDto: CreateBuyOrderDto) {
