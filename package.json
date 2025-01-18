@@ -24,7 +24,7 @@
     "migration:down": "npm run typeorm migration:revert -- -d ./src/database/ormconfig-migrations.ts"
   },
   "dependencies": {
-    "@nestjs-modules/mailer": "^1.6.1",
+    "@nestjs-modules/mailer": "^2.0.0",
     "@nestjs/axios": "^3.0.1",
     "@nestjs/bull": "^10.2.1",
     "@nestjs/common": "^10.0.0",
