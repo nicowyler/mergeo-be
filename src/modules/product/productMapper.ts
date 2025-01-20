@@ -13,6 +13,7 @@ export class ProductMapper {
       measurementUnit: await this.unitMapper.normalizeName(
         dto.UnidadMedida || 'kg',
       ),
+      pricePerBaseUnit: null,
       unitConversionFactor: 1,
       price: dto.price || 0,
       description: dto.Descripcion,

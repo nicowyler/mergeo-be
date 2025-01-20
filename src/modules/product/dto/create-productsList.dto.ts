@@ -1,12 +1,29 @@
-import { IsNotEmpty, IsString, IsUUID } from 'class-validator';
-import { UUID } from 'crypto';
+import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class CreateProductsListDto {
   @IsString()
   @IsNotEmpty()
   name: string;
 
-  @IsUUID()
-  @IsNotEmpty()
-  companyId: UUID;
+  @IsString()
+  @IsOptional()
+  description?: string;
+
+  @IsNumber()
+  @IsOptional()
+  discount?: number;
+}
+
+export class UpdateProductsListDto {
+  @IsString()
+  @IsOptional()
+  name?: string;
+
+  @IsString()
+  @IsOptional()
+  description?: string;
+
+  @IsNumber()
+  @IsOptional()
+  discount?: number;
 }

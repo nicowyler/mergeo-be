@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Product } from 'src/modules/product/entities/product.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -7,73 +7,36 @@ import { SearchProductsDto } from 'src/modules/product/dto/search-products.dto';
 import { getConvertedPricePerUnit } from 'src/modules/product/utils';
 import { UUID } from 'crypto';
 import { ProductList } from 'src/modules/product/entities/product-list.entity';
-import { CreateProductsListDto } from 'src/modules/product/dto/create-productsList.dto';
 import { Company } from 'src/modules/company/entities/company.entity';
 import { PrdouctInlistDto } from 'src/modules/product/dto/prdouct-in-list.dto';
 import { ProductMapper } from 'src/modules/product/productMapper';
 import { Gs1ProductDto } from 'src/modules/product/dto/gs1-product.dto';
-import { FavoriteList } from 'src/modules/product/entities/favorite-list.entity';
 import { BlackList } from 'src/modules/product/entities/black-list.entity';
 import { ClientBlackList } from 'src/modules/company/entities/client-black-list.entity';
-import { name } from 'ejs';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
+import { Unit } from 'src/modules/product/entities/unit.entity';
 
 @Injectable()
 export class ProductService {
   private readonly logger = new Logger(ProductService.name);
 
   constructor(
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
     @InjectRepository(Product)
     private readonly productRepository: Repository<Product>,
     @InjectRepository(ProductList)
     private readonly productListRepository: Repository<ProductList>,
     @InjectRepository(Company)
     private readonly companyRepository: Repository<Company>,
-    @InjectRepository(FavoriteList)
-    private readonly favoriteListRepository: Repository<FavoriteList>,
     @InjectRepository(BlackList)
     private readonly blackListRepository: Repository<BlackList>,
     @InjectRepository(ClientBlackList)
     private readonly clientBlackListRepository: Repository<ClientBlackList>,
+    @InjectRepository(Unit)
+    private readonly unitsRepository: Repository<Unit>,
     private readonly productMapper: ProductMapper,
   ) {}
-
-  // PRODUCTS LISTS
-  // Provider uses this to get the lists of products
-  async getLists(companyId: UUID) {
-    return this.productListRepository.find({
-      where: { company: { id: companyId } },
-    });
-  }
-
-  // get products from a list
-  async getProductsFromList(listId: UUID) {
-    return this.productListRepository.find({
-      where: { id: listId },
-      relations: ['products'],
-    });
-  }
-
-  // create a new list
-  async createList(body: CreateProductsListDto) {
-    try {
-      const { name, companyId } = body;
-
-      // Find the company
-      const company = await this.companyRepository.findOne({
-        where: { id: companyId },
-      });
-
-      if (!company) {
-        throw new Error('Company not found');
-      }
-
-      // Create and save the new product list
-      const productList = this.productListRepository.create({ name, company });
-      return this.productListRepository.save(productList);
-    } catch (error) {
-      throw error;
-    }
-  }
 
   // PROVIDER - SEARCH PRODUCT
   // search products by name, brand, and netContent
@@ -117,11 +80,13 @@ export class ProductService {
   }
 
   // ADD PRODUCT
-  async addProduct(productDto: Gs1ProductDto, companyId: UUID, listId: UUID) {
+  async addProduct(productDto: Gs1ProductDto, companyId: UUID) {
     this.logger.log(`Adding product: ${JSON.stringify(productDto)}`);
 
     // Transform product data
     const productData = await this.productMapper.transformToEntity(productDto);
+    const calculatedProduct = await this.calculatePriceBaseUnit(productData);
+    productData.pricePerBaseUnit = calculatedProduct.pricePerBaseUnit;
 
     // Fetch related entities
     const company = await this.companyRepository.findOne({
@@ -131,21 +96,7 @@ export class ProductService {
       throw new Error(`Company with ID ${companyId} not found`);
     }
 
-    let productList = await this.productListRepository.findOne({
-      where: { id: listId },
-    });
-    if (!productList) {
-      this.logger.log(`ProductList with ID ${listId} not found`);
-
-      productList = await this.productListRepository.findOne({
-        where: { name: 'General' },
-      });
-
-      if (!productList) {
-        productList = this.productListRepository.create({ name: 'General' });
-        productList = await this.productListRepository.save(productList);
-      }
-    }
+    productData.company = company;
 
     // Check if product already exists
     let product = await this.productRepository.findOne({
@@ -166,10 +117,6 @@ export class ProductService {
       product = this.productRepository.create(productData);
     }
 
-    // Assign relations
-    product.company = company;
-    product.lists = [productList]; // Assuming a product can belong to multiple lists
-
     // Save the product
     return this.productRepository.save(product);
   }
@@ -179,7 +126,7 @@ export class ProductService {
     companyId: string, // this is the buyer's company id
     searchProductsDto: SearchProductsDto,
     withCompany = false,
-  ) {
+  ): Promise<{ count: number; products: Product[]; message?: string }> {
     const {
       branchId,
       expectedDeliveryStartDay,
@@ -188,7 +135,6 @@ export class ProductService {
       endHour,
       name,
       brand,
-      baseMeasurementUnit,
       isPickUp,
       pickUpLat,
       pickUpLng,
@@ -315,6 +261,10 @@ export class ProductService {
     // Combine results from both queries
     const combinedProducts = [...dropZoneProducts, ...pickUpProducts];
 
+    if (combinedProducts.length === 0) {
+      return { count: 0, products: [], message: 'No products found' };
+    }
+
     // Filter products based on blacklist
     const blackListedProducts = await this.blackListRepository
       .createQueryBuilder('blackList')
@@ -334,6 +284,9 @@ export class ProductService {
         !blackListedCompanyIds.includes(product.companyId),
     );
 
+    // Apply discounts for products in lists that the user's company is part of
+    filteredProducts = await this.applyDiscounts(filteredProducts, companyId);
+
     if (name) {
       filteredProducts = filteredProducts.filter((product) =>
         product.name.toLowerCase().includes(name.toLowerCase()),
@@ -346,30 +299,10 @@ export class ProductService {
       );
     }
 
-    // Calculate price per base unit for each product and sort by the lowest price
-    const sortedProducts = filteredProducts
-      .map((product) => {
-        const convertedPrice = getConvertedPricePerUnit(
-          product.measurementUnit, // Product's measurement unit
-          product.price, // Product's price
-          product.unitConversionFactor || 1, // Conversion factor or quantity
-          baseMeasurementUnit, // Base unit for comparison (e.g., grams)
-        );
-
-        // If the conversion returned null, skip this product
-        if (convertedPrice === null) {
-          return null; // Or handle this differently, e.g., log a message
-        }
-
-        return {
-          ...product,
-          pricePerBaseUnit: convertedPrice,
-        };
-      })
-      .filter((product) => product !== null); // Filter out null values
-
-    // Sort products by lowest price per base unit
-    sortedProducts.sort((a, b) => a.pricePerBaseUnit - b.pricePerBaseUnit);
+    // Sort products by price base per unit
+    const sortedProducts = filteredProducts.sort(
+      (a, b) => a.pricePerBaseUnit - b.pricePerBaseUnit,
+    );
 
     // Count the number of sorted products
     const productCount = sortedProducts.length;
@@ -378,6 +311,7 @@ export class ProductService {
     return { count: productCount, products: sortedProducts };
   }
 
+  // Obteain the same product with different net contents and prices
   async getNetContentsWithPrices(productId: UUID): Promise<Product[]> {
     const product = await this.productRepository.findOne({
       where: { id: productId },
@@ -414,5 +348,74 @@ export class ProductService {
     }, []);
 
     return bestPriceProducts;
+  }
+
+  private async calculatePriceBaseUnit(
+    product: Partial<Product>,
+  ): Promise<Partial<Product>> {
+    const units = await this.getUnits();
+
+    if (
+      product.measurementUnit === null ||
+      product.price === null ||
+      product.unitConversionFactor === null
+    ) {
+      return product;
+    }
+
+    const convertedPrice = getConvertedPricePerUnit(
+      units,
+      product.measurementUnit, // Product's measurement unit
+      product.price, // Product's price
+      product.unitConversionFactor || 1, // Conversion factor or quantity
+    );
+
+    // If the conversion returned null, skip this product
+    if (convertedPrice === null) {
+      return null; // Or handle this differently, e.g., log a message
+    }
+
+    product.pricePerBaseUnit = convertedPrice;
+
+    return product;
+  }
+
+  private async getUnits(): Promise<string[]> {
+    let units: string[] | undefined = await this.cacheManager.get('units');
+
+    if (!units) {
+      units = await this.unitsRepository
+        .find({
+          select: ['standardName'],
+        })
+        .then((units) => units.map((unit) => unit.standardName));
+      await this.cacheManager.set('units', units);
+    }
+
+    return units;
+  }
+
+  private async applyDiscounts(
+    products: Product[],
+    companyId: string,
+  ): Promise<Product[]> {
+    const productLists = await this.productListRepository
+      .createQueryBuilder('productList')
+      .leftJoinAndSelect('productList.products', 'product')
+      .where('productList.company.id = :companyId', { companyId })
+      .andWhere('productList.discount IS NOT NULL')
+      .getMany();
+
+    const discountedProducts = products.map((product) => {
+      const list = productLists.find((list) =>
+        list.products.some((p) => p.id === product.id),
+      );
+      if (list) {
+        product.price = product.price * (1 - list.discount / 100);
+      }
+      return product;
+    });
+
+    return discountedProducts;
   }
 }

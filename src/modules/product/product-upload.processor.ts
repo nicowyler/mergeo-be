@@ -38,12 +38,18 @@ export class ProductProcessor {
 
   @Process('products-upload')
   async handleProductJob(job: Job<ProductQueueJobType>) {
-    const { gtin, price, companyId, listId, upload_percent } = job.data;
+    const { gtin, price, companyId, upload_percent } = job.data;
     try {
-      const productData = await this.gs1Service.getProductByGTIN(gtin);
-      productData.price = price;
+      if (!gtin) {
+        return;
+      }
+      let productData = await this.gs1Service.getProductByGTIN(gtin);
+      productData = {
+        ...productData,
+        price: price,
+      };
       this.onProductChange(gtin, companyId, upload_percent); // Emit the event
-      await this.productService.addProduct(productData, companyId, listId);
+      await this.productService.addProduct(productData, companyId);
     } catch (error) {
       console.error(`Error processing GTIN ${gtin}:`, error);
     }

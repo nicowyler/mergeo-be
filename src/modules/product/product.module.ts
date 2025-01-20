@@ -21,6 +21,7 @@ import { Address } from 'src/modules/company/entities/address.entity';
 import { ClientBlackList } from 'src/modules/company/entities/client-black-list.entity';
 import { FavoritesService } from 'src/modules/product/services/favorits.service';
 import { BlackListService } from 'src/modules/product/services/blacklist.service';
+import { ProductsListService } from 'src/modules/product/services/lists.service';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { BlackListService } from 'src/modules/product/services/blacklist.service
   controllers: [ProductController],
   providers: [
     ProductService,
+    ProductsListService,
     FavoritesService,
     BlackListService,
     MockProductsService,

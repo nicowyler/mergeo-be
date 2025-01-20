@@ -8,14 +8,12 @@ import { name } from 'ejs';
 export type ProductQueueType = {
   products: GtinProductDto[];
   companyId: UUID;
-  listId: UUID | null;
 };
 
 export type ProductQueueJobType = {
   gtin: string;
   price: number;
   companyId: UUID;
-  listId: UUID | null;
   upload_percent: number;
 };
 
@@ -24,7 +22,7 @@ export class ProductQueueService {
   constructor(@InjectQueue('products') private readonly productQueue: Queue) {}
 
   async addProductsToQueue(params: ProductQueueType) {
-    const { products, companyId, listId } = params;
+    const { products, companyId } = params;
     await this.productQueue.addBulk(
       products.map((product: GtinProductDto, index: number) => ({
         name: 'products-upload',
@@ -33,7 +31,6 @@ export class ProductQueueService {
           gtin: product.gtin,
           price: product.price,
           companyId: companyId,
-          listId: listId,
         },
       })),
     );

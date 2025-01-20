@@ -17,6 +17,8 @@ import { BuyOrderModule } from './modules/buy-order/buy-order.module';
 import { ServerSentEventsModule } from './modules/server-sent-events/server-sent-events.module';
 import { Gs1Module } from './modules/gs1/gs1.module';
 import { MockProductsService } from 'src/modules/product/mock-products.service';
+import { CacheModule } from '@nestjs/cache-manager';
+import KeyvRedis from '@keyv/redis';
 
 @Module({
   imports: [
@@ -25,6 +27,14 @@ import { MockProductsService } from 'src/modules/product/mock-products.service';
       redis: {
         host: 'localhost', // Use your Redis host
         port: 6379, // Use your Redis port
+      },
+    }),
+    CacheModule.registerAsync({
+      isGlobal: true,
+      useFactory: async () => {
+        return {
+          stores: [new KeyvRedis('redis://localhost:6379')],
+        };
       },
     }),
     UserModule,

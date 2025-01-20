@@ -1,62 +1,22 @@
-// Conversion map for various units
-const unitConversionMap = {
-  grams: {
-    grams: 1,
-    kilograms: 1000, // 1 kilogram = 1000 grams
-    milligrams: 0.001, // 1 milligram = 0.001 grams
-  },
-  liters: {
-    liters: 1,
-    milliliters: 1000, // 1 liter = 1000 milliliters
-    cubicCentimeters: 1000, // 1 liter = 1000 cubic centimeters (cc2)
-  },
-  milliliters: {
-    milliliters: 1,
-    liters: 0.001, // 1 milliliter = 0.001 liters
-    cubicCentimeters: 1, // 1 milliliter = 1 cubic centimeter (cc2)
-  },
-  cubicCentimeters: {
-    cubicCentimeters: 1, // 1 cc2 = 1 cubic centimeter
-    liters: 0.001, // 1 cc2 = 0.001 liters
-    milliliters: 1, // 1 cc2 = 1 milliliter
-  },
-  kilograms: {
-    kilograms: 1,
-    grams: 1000, // 1 kilogram = 1000 grams
-    milligrams: 1000000, // 1 kilogram = 1,000,000 milligrams
-  },
-  milligrams: {
-    milligrams: 1,
-    grams: 0.001, // 1 milligram = 0.001 grams
-    kilograms: 0.000001, // 1 milligram = 0.000001 kilograms
-  },
-  // Add other units as needed
-};
-
 export function getConvertedPricePerUnit(
+  validUnits: string[], // List of valid units,
   productUnit: string, // Product's unit of measurement
   productPrice: number, // Product's price
   unitConversionFactor: number, // Conversion factor (or quantity)
-  baseUnit: string, // Base unit for comparison (e.g., grams)
+  // baseUnit: string, // Base unit for comparison (e.g., grams)
 ): number | null {
-  const validConversions = {
-    mass: ['grams', 'g', 'kilograms', 'kg'],
-    volume: [
-      'liters',
-      'l',
-      'milliliters',
-      'ml',
-      'cubic centimeters',
-      'cm³',
-      'cc',
-    ],
-    pieces: ['pieces', 'pcs'],
+  const BaseUnits = {
+    kg: 'kg',
+    gr: 'gr',
+    l: 'l',
+    ml: 'ml',
+    cc: 'cc',
+    pc: 'pc',
   };
-
   // Helper to find which group the unit belongs to
   function findUnitType(unit: string) {
-    for (const [type, units] of Object.entries(validConversions)) {
-      if (units.includes(unit.toLowerCase())) {
+    for (const [type, units] of Object.entries(validUnits)) {
+      if (units.includes(unit)) {
         return type;
       }
     }
@@ -64,14 +24,10 @@ export function getConvertedPricePerUnit(
   }
 
   const productUnitType = findUnitType(productUnit);
-  const baseUnitType = findUnitType(baseUnit);
+  // const baseUnitType = findUnitType(baseUnit);
 
   // If either unit type is not found or they are incompatible, return null
-  if (
-    productUnitType === null ||
-    baseUnitType === null ||
-    productUnitType !== baseUnitType // Different types, like mass vs volume
-  ) {
+  if (productUnitType === null) {
     return null; // Ignore this product if units are incompatible
   }
 
@@ -79,49 +35,19 @@ export function getConvertedPricePerUnit(
   let conversionRate = 1;
 
   // Handle mass conversion
-  if (
-    productUnit.toLowerCase() === 'grams' &&
-    baseUnit.toLowerCase() === 'kilograms'
-  ) {
+  if (productUnit.toLowerCase() === BaseUnits.gr) {
     conversionRate = 0.001; // 1000 grams in a kilogram
-  } else if (
-    productUnit.toLowerCase() === 'kilograms' &&
-    baseUnit.toLowerCase() === 'grams'
-  ) {
-    conversionRate = 1000; // 1 kilogram is 1000 grams
   }
 
   // Handle volume conversion
-  else if (
-    productUnit.toLowerCase() === 'liters' &&
-    baseUnit.toLowerCase() === 'milliliters'
-  ) {
-    conversionRate = 1000; // 1 liter is 1000 milliliters
-  } else if (
-    productUnit.toLowerCase() === 'milliliters' &&
-    baseUnit.toLowerCase() === 'liters'
-  ) {
+  if (productUnit.toLowerCase() === BaseUnits.ml) {
     conversionRate = 0.001; // 1000 milliliters in a liter
-  } else if (
-    productUnit.toLowerCase() === 'milliliters' &&
-    baseUnit.toLowerCase() === 'cubic centimeters'
-  ) {
-    conversionRate = 1; // 1 milliliter is 1 cubic centimeter
-  } else if (
-    productUnit.toLowerCase() === 'cubic centimeters' &&
-    baseUnit.toLowerCase() === 'milliliters'
-  ) {
-    conversionRate = 1; // 1 cubic centimeter is 1 milliliter
-  } else if (
-    productUnit.toLowerCase() === 'liters' &&
-    baseUnit.toLowerCase() === 'cubic centimeters'
-  ) {
-    conversionRate = 1000; // 1 liter is 1000 cubic centimeters
-  } else if (
-    productUnit.toLowerCase() === 'cubic centimeters' &&
-    baseUnit.toLowerCase() === 'liters'
-  ) {
+  } else if (productUnit.toLowerCase() === BaseUnits.cc) {
     conversionRate = 0.001; // 1000 cubic centimeters in a liter
+  }
+
+  if (productUnit.toLowerCase() === BaseUnits.pc) {
+    conversionRate = 1; // 1 piece in a piece
   }
 
   // Calculate the price per base unit

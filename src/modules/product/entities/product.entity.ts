@@ -36,6 +36,9 @@ export class Product extends DateAudit {
   @Column('decimal')
   price: number;
 
+  @Column('decimal')
+  pricePerBaseUnit: number;
+
   @Column({ nullable: true })
   description: string;
 
