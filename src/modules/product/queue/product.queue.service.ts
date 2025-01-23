@@ -3,7 +3,6 @@ import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 import { GtinProductDto } from 'src/modules/product/dto/gtinProduct.dto';
 import { UUID } from 'crypto';
-import { name } from 'ejs';
 
 export type ProductQueueType = {
   products: GtinProductDto[];
@@ -21,6 +20,14 @@ export type ProductQueueJobType = {
 export class ProductQueueService {
   constructor(@InjectQueue('products') private readonly productQueue: Queue) {}
 
+  /**
+   * Adds a list of products to the queue for processing.
+   *
+   * @param {ProductQueueType} params - The parameters for adding products to the queue.
+   * @param {GtinProductDto[]} params.products - The list of products to be added to the queue.
+   * @param {string} params.companyId - The ID of the company to which the products belong.
+   * @returns {Promise<void>} A promise that resolves when the products have been added to the queue.
+   */
   async addProductsToQueue(params: ProductQueueType) {
     const { products, companyId } = params;
     await this.productQueue.addBulk(

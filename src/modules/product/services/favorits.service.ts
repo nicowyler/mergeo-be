@@ -24,6 +24,40 @@ export class FavoritesService {
     private readonly productRepository: Repository<Product>,
   ) {}
 
+  /**
+   * Finds and returns the favorite list for a given company.
+   *
+   * @param {UUID} companyId - The unique identifier of the company.
+   * @returns {Promise<FavoriteList>} - A promise that resolves to the favorite list of the company.
+   * @throws {Error} - Throws an error if the company or favorite list is not found.
+   */
+  async find(companyId: UUID): Promise<FavoriteList> {
+    const company = await this.companyRepository.findOne({
+      where: { id: companyId },
+    });
+    if (!company) {
+      throw new Error('Company not found');
+    }
+    const favoriteList = await this.favoriteListRepository.findOne({
+      where: { company: { id: company.id } },
+      relations: ['products'],
+    });
+
+    if (!favoriteList) {
+      throw new Error('Favorite list not found');
+    }
+    return favoriteList;
+  }
+
+  /**
+   * Adds a product to the favorite list of a company.
+   *
+   * @param companyId - The UUID of the company.
+   * @param productId - The UUID of the product.
+   * @returns A promise that resolves to the updated FavoriteList.
+   * @throws {Error} If the company or product is not found.
+   * @throws {ConflictException} If the product is already in the favorite list.
+   */
   async addProduct(companyId: UUID, productId: UUID): Promise<FavoriteList> {
     const company = await this.companyRepository.findOne({
       where: { id: companyId },
@@ -66,6 +100,15 @@ export class FavoritesService {
     return await this.favoriteListRepository.save(favoriteList);
   }
 
+  /**
+   * Removes a product from the favorite list of a company.
+   *
+   * @param {UUID} companyId - The ID of the company.
+   * @param {UUID} productId - The ID of the product to be removed.
+   * @returns {Promise<FavoriteList>} - The updated favorite list after the product has been removed.
+   * @throws {NotFoundException} - If the company or product is not found.
+   * @throws {Error} - If an error occurs during the process.
+   */
   async removeProduct(companyId: UUID, productId: UUID): Promise<FavoriteList> {
     try {
       const company = await this.companyRepository.findOne({
@@ -95,23 +138,5 @@ export class FavoritesService {
     } catch (error) {
       throw new Error(error.message);
     }
-  }
-
-  async find(companyId: UUID): Promise<FavoriteList> {
-    const company = await this.companyRepository.findOne({
-      where: { id: companyId },
-    });
-    if (!company) {
-      throw new Error('Company not found');
-    }
-    const favoriteList = await this.favoriteListRepository.findOne({
-      where: { company: { id: company.id } },
-      relations: ['products'],
-    });
-
-    if (!favoriteList) {
-      throw new Error('Favorite list not found');
-    }
-    return favoriteList;
   }
 }

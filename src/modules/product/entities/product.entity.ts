@@ -3,7 +3,7 @@ import { DateAudit } from 'src/common/entities/base.entity';
 import { BuyOrderProduct } from 'src/modules/buy-order/entities/buy-order-product.entity';
 import { Company } from 'src/modules/company/entities/company.entity';
 import { PreOrderProduct } from 'src/modules/pre-order/entities/pre-order-product.entity';
-import { ProductList } from 'src/modules/product/entities/product-list.entity';
+import { DiscountsList } from 'src/modules/product/entities/dicount-list.entity';
 import {
   Column,
   Entity,
@@ -87,7 +87,7 @@ export class Product extends DateAudit {
   )
   buyOrderProduct: BuyOrderProduct[];
 
-  @ManyToMany(() => ProductList, (productList) => productList.products)
+  @ManyToMany(() => DiscountsList, (discountsList) => discountsList.products)
   @JoinTable() // Defines the join table
-  lists: ProductList[];
+  lists: DiscountsList[];
 }

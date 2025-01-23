@@ -3,7 +3,7 @@ import { Job } from 'bull';
 import { Injectable, Logger } from '@nestjs/common';
 import { ProductService } from '../services/product.service';
 import { Gs1Service } from 'src/modules/gs1/gs1.service';
-import { ProductQueueJobType } from 'src/modules/product/queue/product.queue';
+import { ProductQueueJobType } from 'src/modules/product/queue/product.queue.service';
 import { TypedEventEmitter } from 'src/modules/event-emitter/typed-event-emitter.class';
 import {
   SERVER_SENT_EVENT,
@@ -22,6 +22,15 @@ export class ProductProcessor {
     private readonly eventEmitter: TypedEventEmitter,
   ) {}
 
+  /**
+   * Handles the event when a product changes.
+   *
+   * @param gtin - The Global Trade Item Number (GTIN) of the product.
+   * @param providerId - The unique identifier of the provider.
+   * @param upload_percent - The percentage of the upload completed.
+   *
+   * Emits a server-sent event with the provided information and logs the event.
+   */
   async onProductChange(
     gtin: string,
     providerId: UUID,

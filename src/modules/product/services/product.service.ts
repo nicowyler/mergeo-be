@@ -6,16 +6,15 @@ import { Branch } from 'src/modules/company/entities/branch.entity';
 import { SearchProductsDto } from 'src/modules/product/dto/search-products.dto';
 import { getConvertedPricePerUnit } from 'src/modules/product/utils';
 import { UUID } from 'crypto';
-import { ProductList } from 'src/modules/product/entities/product-list.entity';
 import { Company } from 'src/modules/company/entities/company.entity';
 import { PrdouctInlistDto } from 'src/modules/product/dto/prdouct-in-list.dto';
 import { ProductMapper } from 'src/modules/product/queue/productMapper';
 import { Gs1ProductDto } from 'src/modules/product/dto/gs1-product.dto';
 import { BlackList } from 'src/modules/product/entities/black-list.entity';
-import { ClientBlackList } from 'src/modules/company/entities/client-black-list.entity';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { Unit } from 'src/modules/product/entities/unit.entity';
+import { DiscountsList } from 'src/modules/product/entities/dicount-list.entity';
 
 @Injectable()
 export class ProductService {
@@ -25,22 +24,28 @@ export class ProductService {
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
     @InjectRepository(Product)
     private readonly productRepository: Repository<Product>,
-    @InjectRepository(ProductList)
-    private readonly productListRepository: Repository<ProductList>,
+    @InjectRepository(DiscountsList)
+    private readonly discountListRepository: Repository<DiscountsList>,
     @InjectRepository(Company)
     private readonly companyRepository: Repository<Company>,
     @InjectRepository(BlackList)
     private readonly blackListRepository: Repository<BlackList>,
-    @InjectRepository(ClientBlackList)
-    private readonly clientBlackListRepository: Repository<ClientBlackList>,
     @InjectRepository(Unit)
     private readonly unitsRepository: Repository<Unit>,
     private readonly productMapper: ProductMapper,
   ) {}
 
-  // PROVIDER - SEARCH PRODUCT
-  // search products by name, brand, and netContent
-  // This is used by the provider to search for products in their inventory
+  /**
+   * Searches for products based on the provided criteria.
+   * This is used by the provider to search for products in their inventory
+   *
+   * @param companyId - The UUID of the company to which the products belong.
+   * @param searchProductsDto - The DTO containing the search criteria.
+   * @param searchProductsDto.name - The name of the product to search for (optional).
+   * @param searchProductsDto.brand - The brand of the product to search for (optional).
+   * @param searchProductsDto.netContent - The net content of the product to search for (optional).
+   * @returns A promise that resolves to an array of products matching the search criteria.
+   */
   async searchProduct(companyId: UUID, searchProductsDto: PrdouctInlistDto) {
     const { name, brand, netContent } = searchProductsDto;
 
@@ -75,12 +80,29 @@ export class ProductService {
     return results;
   }
 
+  /**
+   * Finds a product by its unique identifier.
+   *
+   * @param id - The unique identifier (UUID) of the product to find.
+   * @returns A promise that resolves to the product entity if found, or null if not found.
+   */
   findById(id: UUID) {
     return this.productRepository.findOne({ where: { id } });
   }
 
-  // ADD PRODUCT
-  async addProduct(productDto: Gs1ProductDto, companyId: UUID) {
+  /**
+   * Adds a product to the database. If a product with the same GTIN already exists for the company,
+   * it updates the existing product. Otherwise, it creates a new product.
+   *
+   * @param {Gs1ProductDto} productDto - The data transfer object containing product information.
+   * @param {UUID} companyId - The unique identifier of the company to which the product belongs.
+   * @returns {Promise<Product>} The saved product entity.
+   * @throws {Error} If the company with the given ID is not found.
+   */
+  async addProduct(
+    productDto: Gs1ProductDto,
+    companyId: UUID,
+  ): Promise<Product> {
     this.logger.log(`Adding product: ${JSON.stringify(productDto)}`);
 
     // Transform product data
@@ -125,7 +147,40 @@ export class ProductService {
     return this.productRepository.save(product);
   }
 
-  // Search function using the conversion logic
+  /**
+   * CLIENT SEARCH
+   *
+   * @param companyId - The ID of the buyer's company.
+   * @param searchProductsDto - The DTO containing search criteria.
+   * @param withCompany - Whether to include company details in the result.
+   * @returns A promise that resolves to an object containing the count of products, the list of products, and an optional message.
+   *
+   * The search criteria include:
+   * - branchId: The ID of the branch.
+   * - expectedDeliveryStartDay: The start day for expected delivery.
+   * - expectedDeliveryEndDay: The end day for expected delivery.
+   * - startHour: The start hour for delivery or pick-up.
+   * - endHour: The end hour for delivery or pick-up.
+   * - name: The name of the product.
+   * - brand: The brand of the product.
+   * - isPickUp: Whether to include pick-up points in the search.
+   * - pickUpLat: The latitude for the pick-up location.
+   * - pickUpLng: The longitude for the pick-up location.
+   * - pickUpRadius: The radius for the pick-up location.
+   *
+   * The function performs the following steps:
+   * 1. Calculates the number of days between the start and end delivery dates.
+   * 2. Constructs a query to search for products available via drop zones.
+   * 3. Optionally includes company details based on the `withCompany` parameter.
+   * 4. Filters products based on delivery schedules and hours.
+   * 5. If pick-up is enabled, constructs a query to search for products available via pick-up points.
+   * 6. Combines results from both drop zone and pick-up queries.
+   * 7. Filters out blacklisted products.
+   * 8. Filters products based on name and brand.
+   * 9. Applies discounts to the products. (improvement ==> add this to the queries)
+   * 10. Sorts products by price per base unit.
+   * 11. Returns the count and list of sorted products.
+   */
   async searchProducts(
     companyId: string, // this is the buyer's company id
     searchProductsDto: SearchProductsDto,
@@ -283,9 +338,6 @@ export class ProductService {
       (product) => !blackListedProductIds.includes(product.id),
     );
 
-    // Apply discounts for products in lists that the user's company is part of
-    filteredProducts = await this.applyDiscounts(filteredProducts, companyId);
-
     if (name) {
       filteredProducts = filteredProducts.filter((product) =>
         product.name.toLowerCase().includes(name.toLowerCase()),
@@ -297,6 +349,9 @@ export class ProductService {
         product.brand.toLowerCase().includes(brand.toLowerCase()),
       );
     }
+
+    // Apply discounts for products in lists that the user's company is part of
+    filteredProducts = await this.applyDiscounts(filteredProducts, companyId);
 
     // Sort products by price base per unit
     const sortedProducts = filteredProducts.sort(
@@ -310,7 +365,13 @@ export class ProductService {
     return { count: productCount, products: sortedProducts };
   }
 
-  // Obteain the same product with different net contents and prices
+  /**
+   * Retrieves a list of products with their net contents and the best prices for each net content.
+   *
+   * @param {UUID} productId - The unique identifier of the product.
+   * @returns {Promise<Product[]>} A promise that resolves to an array of products with the best prices for each net content.
+   * @throws {Error} If the product is not found.
+   */
   async getNetContentsWithPrices(productId: UUID): Promise<Product[]> {
     const product = await this.productRepository.findOne({
       where: { id: productId },
@@ -349,6 +410,19 @@ export class ProductService {
     return bestPriceProducts;
   }
 
+  /**
+   * Calculates the price per base unit for a given product.
+   *
+   * @param product - A partial product object containing at least the measurement unit, price, and unit conversion factor.
+   * @returns A promise that resolves to the updated partial product object with the calculated price per base unit, or null if the conversion fails.
+   *
+   * @remarks
+   * - The function retrieves the units using the `getUnits` method.
+   * - If any of the required fields (measurement unit, price, or unit conversion factor) are null, the original product is returned.
+   * - The `getConvertedPricePerUnit` function is used to calculate the price per base unit.
+   * - If the conversion returns null, the function returns null.
+   * - The calculated price per base unit is assigned to the `pricePerBaseUnit` property of the product.
+   */
   private async calculatePriceBaseUnit(
     product: Partial<Product>,
   ): Promise<Partial<Product>> {
@@ -379,6 +453,15 @@ export class ProductService {
     return product;
   }
 
+  /**
+   * Retrieves a list of unit standard names from the cache or database.
+   *
+   * This method first attempts to retrieve the list of units from the cache.
+   * If the units are not found in the cache, it fetches them from the database,
+   * stores them in the cache, and then returns the list.
+   *
+   * @returns {Promise<string[]>} A promise that resolves to an array of unit standard names.
+   */
   private async getUnits(): Promise<string[]> {
     let units: string[] | undefined = await this.cacheManager.get('units');
 
@@ -394,12 +477,21 @@ export class ProductService {
     return units;
   }
 
+  /**
+   * Applies discounts to a list of products based on the company's discount lists.
+   *
+   * @param {Product[]} products - The list of products to which discounts will be applied.
+   * @param {string} companyId - The ID of the company to fetch the discount lists for.
+   * @returns {Promise<Product[]>} - A promise that resolves to the list of products with applied discounts.
+   *
+   * @throws {Error} - Throws an error if there is an issue fetching the discount lists.
+   */
   private async applyDiscounts(
     products: Product[],
     companyId: string,
   ): Promise<Product[]> {
     // Fetch product lists where the company is listed as a receiver of the discount
-    const productLists = await this.productListRepository
+    const productLists = await this.discountListRepository
       .createQueryBuilder('productList')
       .leftJoinAndSelect('productList.products', 'product')
       .leftJoinAndSelect('productList.companies', 'company') // Join companies receiving the discount

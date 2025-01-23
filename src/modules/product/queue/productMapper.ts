@@ -6,6 +6,13 @@ import { UnitService } from 'src/modules/product/services/unitsMapper.service';
 @Injectable()
 export class ProductMapper {
   constructor(private readonly unitMapper: UnitService) {}
+
+  /**
+   * Transforms a Gs1ProductDto object into a Partial<Product> entity.
+   *
+   * @param dto - The Gs1ProductDto object containing product data.
+   * @returns A promise that resolves to a Partial<Product> entity.
+   */
   async transformToEntity(dto: Gs1ProductDto): Promise<Partial<Product>> {
     return {
       gtin: dto.GTIN,

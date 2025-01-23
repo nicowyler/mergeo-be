@@ -12,7 +12,7 @@ import {
   CreateProductsListDto,
   UpdateProductsListDto,
 } from 'src/modules/product/dto/create-productsList.dto';
-import { ProductList } from 'src/modules/product/entities/product-list.entity';
+import { DiscountsList } from 'src/modules/product/entities/dicount-list.entity';
 import { Product } from 'src/modules/product/entities/product.entity';
 import { In, Repository } from 'typeorm';
 
@@ -23,8 +23,8 @@ export class DiscountsListService {
   constructor(
     @InjectRepository(Company)
     private readonly companyRepository: Repository<Company>,
-    @InjectRepository(ProductList)
-    private readonly productListRepository: Repository<ProductList>,
+    @InjectRepository(DiscountsList)
+    private readonly discountListRepository: Repository<DiscountsList>,
   ) {}
 
   /**
@@ -39,7 +39,7 @@ export class DiscountsListService {
     companyId: UUID,
   ): Promise<object[] | { message: string; data: [] }> {
     try {
-      const lists = await this.productListRepository.find({
+      const lists = await this.discountListRepository.find({
         where: { ownerCompany: { id: companyId } },
       });
 
@@ -60,10 +60,10 @@ export class DiscountsListService {
    * Retrieves the products associated with a specific list.
    *
    * @param {UUID} listId - The unique identifier of the list.
-   * @returns {Promise<ProductList>} A promise that resolves to the product list with its associated products.
+   * @returns {Promise<DiscountsList>} A promise that resolves to the product list with its associated products.
    */
-  async getProductsFromList(listId: UUID): Promise<ProductList> {
-    return this.productListRepository.findOne({
+  async getProductsFromList(listId: UUID): Promise<DiscountsList> {
+    return this.discountListRepository.findOne({
       where: { id: listId },
       relations: ['products'],
     });
@@ -107,7 +107,7 @@ export class DiscountsListService {
       }
 
       // Create and save the product list
-      const productList = this.productListRepository.create({
+      const discountList = this.discountListRepository.create({
         name,
         description,
         discount,
@@ -115,9 +115,9 @@ export class DiscountsListService {
         companies: relatedCompanies,
       });
 
-      await this.productListRepository.save(productList);
+      await this.discountListRepository.save(discountList);
 
-      return productList;
+      return discountList;
     } catch (error) {
       throw error;
     }
@@ -128,7 +128,7 @@ export class DiscountsListService {
    *
    * @param {UUID} listId - The ID of the product list to which companies will be added.
    * @param {UUID[]} companyIds - An array of company IDs to be added to the product list.
-   * @returns {Promise<ProductList>} - A promise that resolves to the updated product list.
+   * @returns {Promise<DiscountsList>} - A promise that resolves to the updated product list.
    *
    * @throws {BadRequestException} - If no company IDs are provided.
    * @throws {NotFoundException} - If the product list or any of the companies are not found.
@@ -136,19 +136,19 @@ export class DiscountsListService {
   async addCompaniesToList(
     listId: UUID,
     companyIds: UUID[],
-  ): Promise<ProductList> {
+  ): Promise<DiscountsList> {
     // Validate input
     if (!companyIds || companyIds.length === 0) {
       throw new BadRequestException('No companies provided to add to the list');
     }
 
     // Find the product list
-    const productList = await this.productListRepository.findOne({
+    const discountList = await this.discountListRepository.findOne({
       where: { id: listId },
       relations: ['companies'], // Ensure companies are loaded
     });
 
-    if (!productList) {
+    if (!discountList) {
       throw new NotFoundException(`Product list with ID ${listId} not found`);
     }
 
@@ -162,10 +162,10 @@ export class DiscountsListService {
     }
 
     // Add companies to the list
-    productList.companies = [...productList.companies, ...companies];
+    discountList.companies = [...discountList.companies, ...companies];
 
     // Save the updated list
-    return this.productListRepository.save(productList);
+    return this.discountListRepository.save(discountList);
   }
 
   /**
@@ -173,14 +173,14 @@ export class DiscountsListService {
    *
    * @param listId - The UUID of the product list from which companies will be removed.
    * @param companyIds - An array of UUIDs representing the companies to be removed from the list.
-   * @returns A promise that resolves to the updated ProductList.
+   * @returns A promise that resolves to the updated DiscountsList.
    * @throws {BadRequestException} If no company IDs are provided.
    * @throws {NotFoundException} If the product list with the specified ID is not found.
    */
   async removeCompaniesFromList(
     listId: UUID,
     companyIds: UUID[],
-  ): Promise<ProductList> {
+  ): Promise<DiscountsList> {
     // Validate input
     if (!companyIds || companyIds.length === 0) {
       throw new BadRequestException(
@@ -189,22 +189,22 @@ export class DiscountsListService {
     }
 
     // Find the product list
-    const productList = await this.productListRepository.findOne({
+    const discounList = await this.discountListRepository.findOne({
       where: { id: listId },
       relations: ['companies'], // Ensure companies are loaded
     });
 
-    if (!productList) {
+    if (!discounList) {
       throw new NotFoundException(`Product list with ID ${listId} not found`);
     }
 
     // Filter out the companies to be removed
-    productList.companies = productList.companies.filter(
+    discounList.companies = discounList.companies.filter(
       (company) => !companyIds.includes(company.id),
     );
 
     // Save the updated list
-    return this.productListRepository.save(productList);
+    return this.discountListRepository.save(discounList);
   }
 
   /**
@@ -218,13 +218,13 @@ export class DiscountsListService {
   async editList(listId: UUID, body: UpdateProductsListDto) {
     try {
       const { description, discount } = body;
-      const list = await this.productListRepository.findOneBy({ id: listId });
+      const list = await this.discountListRepository.findOneBy({ id: listId });
       if (!list) {
         throw new NotFoundException('List not found');
       }
       if (discount) list.discount = discount;
       if (description) list.description = description;
-      return this.productListRepository.save(list);
+      return this.discountListRepository.save(list);
     } catch (error) {
       throw error;
     }
@@ -235,13 +235,13 @@ export class DiscountsListService {
    *
    * @param {UUID} listId - The unique identifier of the product list.
    * @param {Product[]} products - An array of products to be added to the list.
-   * @returns {Promise<ProductList>} - The updated product list with the newly added products.
+   * @returns {Promise<DiscountsList>} - The updated product list with the newly added products.
    * @throws {NotFoundException} - If the product list with the specified ID is not found.
    */
-  async addProducts(listId: UUID, products: Product[]): Promise<ProductList> {
+  async addProducts(listId: UUID, products: Product[]): Promise<DiscountsList> {
     try {
       // Find the list with its existing products
-      const list = await this.productListRepository.findOne({
+      const list = await this.discountListRepository.findOne({
         where: { id: listId },
         relations: ['products'],
       });
@@ -263,7 +263,7 @@ export class DiscountsListService {
 
         if (newProducts.length > 0) {
           // Add new products to the list
-          await this.productListRepository
+          await this.discountListRepository
             .createQueryBuilder()
             .relation('products')
             .of(list) // The list to associate products with
@@ -272,7 +272,7 @@ export class DiscountsListService {
       }
 
       // Reload the list with updated products
-      return await this.productListRepository.findOne({
+      return await this.discountListRepository.findOne({
         where: { id: listId },
         relations: ['products'],
       });
@@ -286,12 +286,15 @@ export class DiscountsListService {
    *
    * @param {UUID} listId - The ID of the product list.
    * @param {UUID[]} productId - An array of product IDs to be removed from the list.
-   * @returns {Promise<ProductList>} - The updated product list after removal of specified products.
+   * @returns {Promise<DiscountsList>} - The updated product list after removal of specified products.
    * @throws {NotFoundException} - If the product list with the given ID is not found.
    */
-  async removeProducts(listId: UUID, productId: UUID[]): Promise<ProductList> {
+  async removeProducts(
+    listId: UUID,
+    productId: UUID[],
+  ): Promise<DiscountsList> {
     try {
-      const list = await this.productListRepository.findOne({
+      const list = await this.discountListRepository.findOne({
         where: { id: listId },
         relations: ['products'],
       });
@@ -302,7 +305,7 @@ export class DiscountsListService {
         list.products = list.products.filter(
           (product) => !productId.includes(product.id),
         );
-        return this.productListRepository.save(list);
+        return this.discountListRepository.save(list);
       }
     } catch (error) {
       throw error;

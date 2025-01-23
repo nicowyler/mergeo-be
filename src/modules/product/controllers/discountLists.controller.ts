@@ -16,8 +16,8 @@ import {
 import { Product } from 'src/modules/product/entities/product.entity';
 import { TransformInterceptor } from 'src/interceptors/response.interceptor';
 import { ResponseMessage } from 'src/decorators/response_message.decorator';
-import { ProductList } from 'src/modules/product/entities/product-list.entity';
 import { DiscountsListService } from 'src/modules/product/services/discountsLists.service';
+import { DiscountsList } from 'src/modules/product/entities/dicount-list.entity';
 
 @Controller('/product/discount-list')
 @UseInterceptors(TransformInterceptor)
@@ -128,13 +128,13 @@ export class DiscountListsController {
    *
    * @param {UUID} listId - The unique identifier of the list from which products will be removed.
    * @param {UUID[]} productsId - An array of unique identifiers of the products to be removed from the list.
-   * @returns {Promise<ProductList>} - A promise that resolves when the products have been successfully removed from the list.
+   * @returns {Promise<DiscountsList>} - A promise that resolves when the products have been successfully removed from the list.
    */
   @Post('/:listId/remove-products')
   removeProductFromList(
     @Param('listId') listId: UUID,
     @Body() productsId: UUID[],
-  ): Promise<ProductList> {
+  ): Promise<DiscountsList> {
     return this.discountsListService.removeProducts(listId, productsId);
   }
 }

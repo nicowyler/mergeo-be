@@ -9,29 +9,20 @@ import {
   UploadedFile,
   Logger,
   UnsupportedMediaTypeException,
-  Patch,
   BadRequestException,
 } from '@nestjs/common';
 import { ProductService } from '../services/product.service';
 import { SearchProductsDto } from 'src/modules/product/dto/search-products.dto';
 import { UUID } from 'crypto';
-import {
-  CreateProductsListDto,
-  UpdateProductsListDto,
-} from 'src/modules/product/dto/create-productsList.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import * as xlsx from 'xlsx';
 import { GtinProductDto } from 'src/modules/product/dto/gtinProduct.dto';
-import { ProductQueueService } from 'src/modules/product/queue/product.queue';
+import { ProductQueueService } from 'src/modules/product/queue/product.queue.service';
 import { Product } from 'src/modules/product/entities/product.entity';
 import { Gs1Service } from 'src/modules/gs1/gs1.service';
 import { PrdouctInlistDto } from 'src/modules/product/dto/prdouct-in-list.dto';
 import { TransformInterceptor } from 'src/interceptors/response.interceptor';
 import { ResponseMessage } from 'src/decorators/response_message.decorator';
-import { FavoritesService } from 'src/modules/product/services/favorits.service';
-import { BlackListService } from 'src/modules/product/services/blacklist.service';
-import { ProductList } from 'src/modules/product/entities/product-list.entity';
-import { DiscountsListService } from 'src/modules/product/services/discountsLists.service';
 
 @Controller('/product')
 @UseInterceptors(TransformInterceptor)
@@ -40,9 +31,6 @@ export class ProductController {
 
   constructor(
     private readonly productService: ProductService,
-    private readonly discountsListService: DiscountsListService,
-    private readonly favoritesService: FavoritesService,
-    private readonly blackListService: BlackListService,
     private readonly productQueueService: ProductQueueService,
     private readonly gs1Service: Gs1Service,
   ) {}
@@ -171,93 +159,5 @@ export class ProductController {
       this.logger.error('Error uploading products:', error);
       throw error;
     }
-  }
-
-  /** ################### FAVORITE LISTS ###################*/
-  /**
-   * Retrieves the list of favorite items for a given company.
-   *
-   * @param companyId - The UUID of the company whose favorite list is to be retrieved.
-   * @returns A promise that resolves to the list of favorite items for the specified company.
-   */
-  @ResponseMessage('Lista de favoritos encontrada con exito!')
-  @Get('/favorite/:companyId')
-  getFavoritList(@Param('companyId') companyId: UUID) {
-    return this.favoritesService.find(companyId);
-  }
-
-  /**
-   * Adds a product to the favorite list of a company.
-   *
-   * @param companyId - The UUID of the company.
-   * @param productId - The UUID of the product.
-   * @returns A promise that resolves when the product has been added to the favorite list.
-   */
-  @Post('/favorite/:companyId/:productId')
-  addProductToFavoriteList(
-    @Param('companyId') companyId: UUID,
-    @Param('productId') productId: UUID,
-  ) {
-    return this.favoritesService.addProduct(companyId, productId);
-  }
-
-  /**
-   * Removes a product from the favorite list of a company.
-   *
-   * @param companyId - The UUID of the company.
-   * @param productId - The UUID of the product to be removed from the favorite list.
-   * @returns A promise that resolves when the product is removed from the favorite list.
-   */
-  @Post('/favorite/:companyId/:productId/remove')
-  removeProductFromFavoriteList(
-    @Param('companyId') companyId: UUID,
-    @Param('productId') productId: UUID,
-  ) {
-    return this.favoritesService.removeProduct(companyId, productId);
-  }
-
-  /** ################### BLACK LISTS ###################*/
-  /**
-   * Retrieves the blacklist for a given company.
-   *
-   * @param companyId - The UUID of the company whose blacklist is to be retrieved.
-   * @returns A promise that resolves to the blacklist of the specified company.
-   */
-  @ResponseMessage('Lista negra encontrada con exito!')
-  @Get('/blacklist/:companyId')
-  getBlacklist(@Param('companyId') companyId: UUID) {
-    return this.blackListService.find(companyId);
-  }
-
-  /**
-   * Adds a product to the blacklist for a specific company.
-   *
-   * @param companyId - The UUID of the company.
-   * @param productId - The UUID of the product to be blacklisted.
-   * @returns A promise that resolves when the product has been added to the blacklist.
-   */
-  @ResponseMessage('Producto agregado a la lista negra!')
-  @Post('/blacklist/:companyId/')
-  addProductToBlacklist(
-    @Param('companyId') companyId: UUID,
-    @Body() productsId: UUID[],
-  ) {
-    return this.blackListService.addProducts(companyId, productsId);
-  }
-
-  /**
-   * Removes a product from the blacklist for a given company.
-   *
-   * @param companyId - The UUID of the company.
-   * @param productsId - The UUID of the product to be removed from the blacklist.
-   * @returns A promise that resolves when the product is removed from the blacklist.
-   */
-  @ResponseMessage('Producto removido de la lista negra!')
-  @Post('/blacklist/:companyId/remove')
-  removeProductFromBlacklist(
-    @Param('companyId') companyId: UUID,
-    @Body() productsId: UUID[],
-  ) {
-    return this.blackListService.removeProducts(companyId, productsId);
   }
 }

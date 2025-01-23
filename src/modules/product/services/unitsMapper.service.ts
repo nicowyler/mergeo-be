@@ -12,6 +12,15 @@ export class UnitService {
     private readonly unitRepository: Repository<Unit>,
   ) {}
 
+  /**
+   * Normalizes the given unit name by converting it to lowercase and checking if it exists in the aliases array.
+   * If a match is found, returns the standard name of the unit.
+   * If no match is found, throws an error.
+   *
+   * @param {string} name - The name of the unit to normalize.
+   * @returns {Promise<string>} - A promise that resolves to the standard name of the unit.
+   * @throws {Error} - Throws an error if no equivalence is found for the given name.
+   */
   async normalizeName(name: string): Promise<string> {
     this.logger.log(`Normalizando nombre de unidad: ${name}`);
     const normalizedName = name.toLowerCase();

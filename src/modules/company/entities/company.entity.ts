@@ -11,13 +11,13 @@ import { DropZone } from 'src/modules/company/dropZones/dropZone.entity';
 import { Product } from 'src/modules/product/entities/product.entity';
 import { PreOrder } from 'src/modules/pre-order/entities/pre-order.entity';
 import { UUID } from 'crypto';
-import { ProductList } from 'src/modules/product/entities/product-list.entity';
 import { DateAudit } from 'src/common/entities/base.entity';
 import { User } from 'src/modules/user/user.entity';
 import { Branch } from 'src/modules/company/entities/branch.entity';
 import { BlackList } from 'src/modules/product/entities/black-list.entity';
 import { FavoriteList } from 'src/modules/product/entities/favorite-list.entity';
 import { ClientBlackList } from 'src/modules/company/entities/client-black-list.entity';
+import { DiscountsList } from 'src/modules/product/entities/dicount-list.entity';
 
 @Entity()
 @Unique('UQ_BUSINESS_NAME', ['razonSocial'])
@@ -63,8 +63,8 @@ export class Company extends DateAudit {
   @OneToMany(() => PreOrder, (preOrder) => preOrder.provider)
   providerPreOrders: PreOrder[]; // Pre-orders fulfilled by this company
 
-  @OneToMany(() => ProductList, (productList) => productList.companies)
-  productLists: ProductList[];
+  @OneToMany(() => DiscountsList, (dicountList) => dicountList.companies)
+  productLists: DiscountsList[];
 
   // Add blacklist relation
   @OneToMany(() => BlackList, (blackList) => blackList.company, {

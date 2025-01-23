@@ -14,7 +14,7 @@ import {
 
 @Entity()
 @Unique('UQ_PROSDUCT_LIST_NAME', ['name'])
-export class ProductList extends DateAudit {
+export class DiscountsList extends DateAudit {
   @PrimaryGeneratedColumn('uuid')
   id: UUID;
 

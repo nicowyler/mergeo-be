@@ -4,9 +4,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from 'src/modules/user/user.entity';
 import { Branch } from 'src/modules/company/entities/branch.entity';
 import { Product } from './entities/product.entity';
-import { ProductList } from 'src/modules/product/entities/product-list.entity';
 import { BullModule } from '@nestjs/bull';
-import { ProductQueueService } from 'src/modules/product/queue/product.queue';
+import { ProductQueueService } from 'src/modules/product/queue/product.queue.service';
 import { ProductMapper } from 'src/modules/product/queue/productMapper';
 import { ProductProcessor } from 'src/modules/product/queue/product-upload.processor';
 import { Gs1Module } from 'src/modules/gs1/gs1.module';
@@ -20,17 +19,18 @@ import { ClientBlackList } from 'src/modules/company/entities/client-black-list.
 import { FavoritesService } from 'src/modules/product/services/favorits.service';
 import { BlackListService } from 'src/modules/product/services/blacklist.service';
 import { DiscountsListService } from 'src/modules/product/services/discountsLists.service';
-import { ProductController } from 'src/modules/product/controllers/product.controller copy';
+import { ProductController } from 'src/modules/product/controllers/product.controller';
 import { DiscountListsController } from 'src/modules/product/controllers/discountLists.controller';
 import { FavoriteListController } from 'src/modules/product/controllers/favoriteList.controller';
 import { BlackListController } from 'src/modules/product/controllers/blackList.controller';
+import { DiscountsList } from 'src/modules/product/entities/dicount-list.entity';
 
 @Module({
   imports: [
     Gs1Module,
     TypeOrmModule.forFeature([
       Product,
-      ProductList,
+      DiscountsList,
       FavoriteList,
       BlackList,
       Unit,
