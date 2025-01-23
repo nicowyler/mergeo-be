@@ -5,6 +5,7 @@ import { Product } from 'src/modules/product/entities/product.entity';
 import {
   Column,
   Entity,
+  JoinTable,
   ManyToMany,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -29,7 +30,11 @@ export class ProductList extends DateAudit {
   @ManyToOne(() => Company, (company) => company.productLists, {
     nullable: false,
   })
-  company: Company;
+  ownerCompany: Company; // The owner of the list
+
+  @ManyToMany(() => Company)
+  @JoinTable()
+  companies: Company[]; // Companies receiving the discount
 
   @ManyToMany(() => Product, (product) => product.lists)
   products: Product[];

@@ -125,7 +125,7 @@ export class CompanyService {
 
       if (!company) {
         throw new NotFoundException(
-          `${ErrorMessages.COMPANY_NOT_FOUND} for cuit ${cuit}`,
+          `${ErrorMessages.COMPANY_NOT_FOUND} ${cuit}`,
         );
       }
 

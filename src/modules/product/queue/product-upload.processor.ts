@@ -1,9 +1,9 @@
 import { Process, Processor } from '@nestjs/bull';
 import { Job } from 'bull';
 import { Injectable, Logger } from '@nestjs/common';
-import { ProductService } from './services/product.service';
+import { ProductService } from '../services/product.service';
 import { Gs1Service } from 'src/modules/gs1/gs1.service';
-import { ProductQueueJobType } from 'src/modules/product/product.queue';
+import { ProductQueueJobType } from 'src/modules/product/queue/product.queue';
 import { TypedEventEmitter } from 'src/modules/event-emitter/typed-event-emitter.class';
 import {
   SERVER_SENT_EVENT,

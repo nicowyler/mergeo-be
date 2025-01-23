@@ -9,7 +9,7 @@ import { UUID } from 'crypto';
 import { ProductList } from 'src/modules/product/entities/product-list.entity';
 import { Company } from 'src/modules/company/entities/company.entity';
 import { PrdouctInlistDto } from 'src/modules/product/dto/prdouct-in-list.dto';
-import { ProductMapper } from 'src/modules/product/productMapper';
+import { ProductMapper } from 'src/modules/product/queue/productMapper';
 import { Gs1ProductDto } from 'src/modules/product/dto/gs1-product.dto';
 import { BlackList } from 'src/modules/product/entities/black-list.entity';
 import { ClientBlackList } from 'src/modules/company/entities/client-black-list.entity';
@@ -98,21 +98,25 @@ export class ProductService {
 
     productData.company = company;
 
-    // Check if product already exists
+    // Check if a product with the same GTIN exists for the company
     let product = await this.productRepository.findOne({
-      where: { gtin: productDto.GTIN },
+      where: {
+        gtin: productDto.GTIN,
+        company: { id: companyId },
+      },
+      relations: ['company'],
     });
 
-    // if the GTIN already exists, we update the product with incoming data
     if (product) {
+      // Update the product if it already exists
       this.logger.log(
-        `Product with GTIN ${productDto.GTIN} already exists. Updating product.`,
+        `Product with GTIN ${productDto.GTIN} already exists for company ${companyId}. Updating product.`,
       );
       product = this.productRepository.merge(product, productData);
     } else {
-      // Create new product
+      // Create a new product for the company
       this.logger.log(
-        `Product with GTIN ${productDto.GTIN} does not exist. Creating new product.`,
+        `Product with GTIN ${productDto.GTIN} does not exist for company ${companyId}. Creating new product.`,
       );
       product = this.productRepository.create(productData);
     }
@@ -275,13 +279,8 @@ export class ProductService {
       bl.products.map((p) => p.id),
     );
 
-    const blackListedCompanies = await this.clientBlackListRepository.find();
-    const blackListedCompanyIds = blackListedCompanies.map((bl) => bl.id);
-
     let filteredProducts = combinedProducts.filter(
-      (product) =>
-        !blackListedProductIds.includes(product.id) &&
-        !blackListedCompanyIds.includes(product.companyId),
+      (product) => !blackListedProductIds.includes(product.id),
     );
 
     // Apply discounts for products in lists that the user's company is part of
@@ -399,20 +398,26 @@ export class ProductService {
     products: Product[],
     companyId: string,
   ): Promise<Product[]> {
+    // Fetch product lists where the company is listed as a receiver of the discount
     const productLists = await this.productListRepository
       .createQueryBuilder('productList')
       .leftJoinAndSelect('productList.products', 'product')
-      .where('productList.company.id = :companyId', { companyId })
-      .andWhere('productList.discount IS NOT NULL')
+      .leftJoinAndSelect('productList.companies', 'company') // Join companies receiving the discount
+      .where('company.id = :companyId', { companyId }) // Ensure the company is one of the listed companies
+      .andWhere('productList.discount IS NOT NULL') // Ensure there is a discount in the list
       .getMany();
 
+    // Apply discounts to the products
     const discountedProducts = products.map((product) => {
+      // Find the product list that contains the product and is associated with the given company
       const list = productLists.find((list) =>
         list.products.some((p) => p.id === product.id),
       );
+
       if (list) {
-        product.price = product.price * (1 - list.discount / 100);
+        product.price = product.price * (1 - list.discount / 100); // Apply the discount
       }
+
       return product;
     });
 

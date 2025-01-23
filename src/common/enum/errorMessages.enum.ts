@@ -30,6 +30,9 @@ export enum ErrorMessages {
   ROLE_NOT_FOUND = 'No se encontro ningun rol con el id',
   ROLE_HAS_USER = 'Hay un usuario asociado a este rol',
 
+  // BLACKLIST
+  BLACKLIST_NOT_FOUND = 'No se encontro ninguna lista de negra con el id',
+
   // SEARCH LIST
   SEARCH_LIST_NAME_TAKEN = 'El nombre de la lista ya existe',
   SEARCH_LIST_NOT_FOUND = 'No se encontro ningua list con el id',

@@ -35,7 +35,7 @@ export class CompanyController {
   constructor(
     private readonly companyService: CompanyService,
     private readonly branchService: BranchService,
-    private readonly clientBlackList: ClientBlackListService,
+    private readonly clientBlackListService: ClientBlackListService,
   ) {}
 
   @Post()
@@ -120,24 +120,30 @@ export class CompanyController {
   }
 
   // BLACKLIST
-  @Post('/blacklist/:companyId')
-  @UseGuards(AuthGuard)
-  @ResponseMessage('Producto agregado a la blacklist con exito!')
-  async addProductToBlackList(@Param('companyId') companyId: UUID) {
-    return this.clientBlackList.add(companyId);
-  }
-
   @Get('/blacklist/:companyId')
   @UseGuards(AuthGuard)
   @ResponseMessage('Clientes en la blacklist!')
   async getBlackList(@Param('companyId') companyId: UUID) {
-    return this.clientBlackList.find(companyId);
+    return this.clientBlackListService.find(companyId);
+  }
+
+  @Post('/blacklist/:companyId')
+  @UseGuards(AuthGuard)
+  @ResponseMessage('Producto agregado a la blacklist con exito!')
+  async addProductToBlackList(
+    @Param('companyId') companyId: UUID,
+    @Body() body: UUID[],
+  ) {
+    return this.clientBlackListService.add(companyId, body);
   }
 
   @Post('/blacklist/:companyId/remove')
   @UseGuards(AuthGuard)
   @ResponseMessage('Removido de la blacklist!')
-  async removeFormBlackList(@Param('companyId') companyId: UUID) {
-    return this.clientBlackList.remove(companyId);
+  async removeFormBlackList(
+    @Param('companyId') companyId: UUID,
+    @Body() body: UUID[],
+  ) {
+    return this.clientBlackListService.remove(companyId, body);
   }
 }

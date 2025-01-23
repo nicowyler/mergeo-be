@@ -12,7 +12,7 @@ import {
   Patch,
   BadRequestException,
 } from '@nestjs/common';
-import { ProductService } from './services/product.service';
+import { ProductService } from '../services/product.service';
 import { SearchProductsDto } from 'src/modules/product/dto/search-products.dto';
 import { UUID } from 'crypto';
 import {
@@ -22,7 +22,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import * as xlsx from 'xlsx';
 import { GtinProductDto } from 'src/modules/product/dto/gtinProduct.dto';
-import { ProductQueueService } from 'src/modules/product/product.queue';
+import { ProductQueueService } from 'src/modules/product/queue/product.queue';
 import { Product } from 'src/modules/product/entities/product.entity';
 import { Gs1Service } from 'src/modules/gs1/gs1.service';
 import { PrdouctInlistDto } from 'src/modules/product/dto/prdouct-in-list.dto';
@@ -30,8 +30,8 @@ import { TransformInterceptor } from 'src/interceptors/response.interceptor';
 import { ResponseMessage } from 'src/decorators/response_message.decorator';
 import { FavoritesService } from 'src/modules/product/services/favorits.service';
 import { BlackListService } from 'src/modules/product/services/blacklist.service';
-import { ProductsListService } from 'src/modules/product/services/lists.service';
 import { ProductList } from 'src/modules/product/entities/product-list.entity';
+import { DiscountsListService } from 'src/modules/product/services/discountsLists.service';
 
 @Controller('/product')
 @UseInterceptors(TransformInterceptor)
@@ -40,7 +40,7 @@ export class ProductController {
 
   constructor(
     private readonly productService: ProductService,
-    private readonly productsListsService: ProductsListService,
+    private readonly discountsListService: DiscountsListService,
     private readonly favoritesService: FavoritesService,
     private readonly blackListService: BlackListService,
     private readonly productQueueService: ProductQueueService,
@@ -173,85 +173,6 @@ export class ProductController {
     }
   }
 
-  /** ################### PRODUCTS LISTS ###################*/
-  /**
-   * Creates a new list of products for the specified company.
-   * This is used to add a discounts to products in the list
-   *
-   * @param companyId - The UUID of the company for which the product list is being created.
-   * @param body - The data transfer object containing the details of the products list to be created.
-   * @returns A promise that resolves to the created products list.
-   */
-  @Post('/lists/:companyId')
-  async createList(
-    @Param('companyId') companyId: UUID,
-    @Body() body: CreateProductsListDto,
-  ) {
-    return this.productsListsService.createList(companyId, body);
-  }
-
-  /**
-   * Retrieves the lists of products for a given company.
-   *
-   * @param companyId - The UUID of the company whose product lists are to be retrieved.
-   * @returns A promise that resolves to the product lists of the specified company.
-   */
-  @Get('/lists/:companyId')
-  @ResponseMessage('Listas encontradas!')
-  findLists(@Param('companyId') companyId: UUID) {
-    return this.productsListsService.getLists(companyId);
-  }
-
-  /**
-   * Retrieves the products from a specified list.
-   *
-   * @param listId - The UUID of the list from which to retrieve products.
-   * @returns A promise that resolves to the products in the specified list.
-   */
-  @Get('/list/:listId')
-  findProductsInList(@Param('listId') listId: UUID) {
-    return this.productsListsService.getProductsFromList(listId);
-  }
-
-  /**
-   * Edits a product list with the given list ID and update data.
-   *
-   * @param listId - The UUID of the product list to be edited.
-   * @param body - description and/or discount
-   * @returns The updated product list.
-   */
-  @Patch('/list/:listId')
-  editList(@Param('listId') listId: UUID, @Body() body: UpdateProductsListDto) {
-    return this.productsListsService.editList(listId, body);
-  }
-
-  /**
-   * Adds a list of products to a specified product list.
-   *
-   * @param listId - The UUID of the product list to which the products will be added.
-   * @param products - An array of products to be added to the list.
-   * @returns A promise that resolves when the products have been added to the list.
-   */
-  @Post('/list/:listId/add')
-  addProductToList(@Param('listId') listId: UUID, @Body() products: Product[]) {
-    return this.productsListsService.addProducts(listId, products);
-  }
-
-  /**
-   * Removes a list of products from a specified list.
-   *
-   * @param {UUID} listId - The unique identifier of the list from which products will be removed.
-   * @param {UUID[]} productsId - An array of unique identifiers of the products to be removed from the list.
-   * @returns {Promise<ProductList>} - A promise that resolves when the products have been successfully removed from the list.
-   */
-  @Post('/list/:listId/remove')
-  removeProductFromList(
-    @Param('listId') listId: UUID,
-    @Body() productsId: UUID[],
-  ): Promise<ProductList> {
-    return this.productsListsService.removeProducts(listId, productsId);
-  }
-
   /** ################### FAVORITE LISTS ###################*/
   /**
    * Retrieves the list of favorite items for a given company.
@@ -316,27 +237,27 @@ export class ProductController {
    * @returns A promise that resolves when the product has been added to the blacklist.
    */
   @ResponseMessage('Producto agregado a la lista negra!')
-  @Post('/blacklist/:companyId/:productId')
+  @Post('/blacklist/:companyId/')
   addProductToBlacklist(
     @Param('companyId') companyId: UUID,
-    @Param('productId') productId: UUID,
+    @Body() productsId: UUID[],
   ) {
-    return this.blackListService.addProduct(companyId, productId);
+    return this.blackListService.addProducts(companyId, productsId);
   }
 
   /**
    * Removes a product from the blacklist for a given company.
    *
    * @param companyId - The UUID of the company.
-   * @param productId - The UUID of the product to be removed from the blacklist.
+   * @param productsId - The UUID of the product to be removed from the blacklist.
    * @returns A promise that resolves when the product is removed from the blacklist.
    */
   @ResponseMessage('Producto removido de la lista negra!')
-  @Post('/blacklist/:companyId/:productId/remove')
+  @Post('/blacklist/:companyId/remove')
   removeProductFromBlacklist(
     @Param('companyId') companyId: UUID,
-    @Param('productId') productId: UUID,
+    @Body() productsId: UUID[],
   ) {
-    return this.blackListService.removeProduct(companyId, productId);
+    return this.blackListService.removeProducts(companyId, productsId);
   }
 }

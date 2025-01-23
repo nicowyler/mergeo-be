@@ -4,6 +4,7 @@ import {
   PrimaryGeneratedColumn,
   OneToMany,
   Unique,
+  OneToOne,
 } from 'typeorm';
 import { PickUpPoint } from 'src/modules/company/pickUpPoints/pickUpPoint.entity';
 import { DropZone } from 'src/modules/company/dropZones/dropZone.entity';
@@ -62,7 +63,7 @@ export class Company extends DateAudit {
   @OneToMany(() => PreOrder, (preOrder) => preOrder.provider)
   providerPreOrders: PreOrder[]; // Pre-orders fulfilled by this company
 
-  @OneToMany(() => ProductList, (productList) => productList.company)
+  @OneToMany(() => ProductList, (productList) => productList.companies)
   productLists: ProductList[];
 
   // Add blacklist relation
@@ -77,9 +78,6 @@ export class Company extends DateAudit {
   })
   favoriteLists: FavoriteList[];
 
-  @OneToMany(
-    () => ClientBlackList,
-    (clientBlackList) => clientBlackList.company,
-  )
-  clientBlackLists: ClientBlackList[];
+  @OneToOne(() => ClientBlackList, (blacklist) => blacklist.owner)
+  blackList: ClientBlackList;
 }

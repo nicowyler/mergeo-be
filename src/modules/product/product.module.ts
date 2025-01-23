@@ -1,16 +1,14 @@
 import { Module } from '@nestjs/common';
 import { ProductService } from './services/product.service';
-import { ProductController } from './product.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from 'src/modules/user/user.entity';
 import { Branch } from 'src/modules/company/entities/branch.entity';
 import { Product } from './entities/product.entity';
 import { ProductList } from 'src/modules/product/entities/product-list.entity';
-import { MockProductsService } from './mock-products.service';
 import { BullModule } from '@nestjs/bull';
-import { ProductQueueService } from 'src/modules/product/product.queue';
-import { ProductMapper } from 'src/modules/product/productMapper';
-import { ProductProcessor } from 'src/modules/product/product-upload.processor';
+import { ProductQueueService } from 'src/modules/product/queue/product.queue';
+import { ProductMapper } from 'src/modules/product/queue/productMapper';
+import { ProductProcessor } from 'src/modules/product/queue/product-upload.processor';
 import { Gs1Module } from 'src/modules/gs1/gs1.module';
 import { UnitService } from 'src/modules/product/services/unitsMapper.service';
 import { Unit } from 'src/modules/product/entities/unit.entity';
@@ -21,7 +19,11 @@ import { Address } from 'src/modules/company/entities/address.entity';
 import { ClientBlackList } from 'src/modules/company/entities/client-black-list.entity';
 import { FavoritesService } from 'src/modules/product/services/favorits.service';
 import { BlackListService } from 'src/modules/product/services/blacklist.service';
-import { ProductsListService } from 'src/modules/product/services/lists.service';
+import { DiscountsListService } from 'src/modules/product/services/discountsLists.service';
+import { ProductController } from 'src/modules/product/controllers/product.controller copy';
+import { DiscountListsController } from 'src/modules/product/controllers/discountLists.controller';
+import { FavoriteListController } from 'src/modules/product/controllers/favoriteList.controller';
+import { BlackListController } from 'src/modules/product/controllers/blackList.controller';
 
 @Module({
   imports: [
@@ -42,18 +44,22 @@ import { ProductsListService } from 'src/modules/product/services/lists.service'
       name: 'products',
     }),
   ],
-  controllers: [ProductController],
+  controllers: [
+    ProductController,
+    DiscountListsController,
+    FavoriteListController,
+    BlackListController,
+  ],
   providers: [
     ProductService,
-    ProductsListService,
+    DiscountsListService,
     FavoritesService,
     BlackListService,
-    MockProductsService,
     ProductQueueService,
     ProductMapper,
     ProductProcessor,
     UnitService,
   ],
-  exports: [ProductService, MockProductsService],
+  exports: [ProductService],
 })
 export class ProductModule {}

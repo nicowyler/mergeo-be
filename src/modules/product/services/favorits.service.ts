@@ -1,4 +1,9 @@
-import { ConflictException, Injectable, Logger } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { FavoriteList } from '../entities/favorite-list.entity';
@@ -62,30 +67,34 @@ export class FavoritesService {
   }
 
   async removeProduct(companyId: UUID, productId: UUID): Promise<FavoriteList> {
-    const company = await this.companyRepository.findOne({
-      where: { id: companyId },
-    });
-    const product = await this.productRepository.findOne({
-      where: { id: productId },
-    });
+    try {
+      const company = await this.companyRepository.findOne({
+        where: { id: companyId },
+      });
+      const product = await this.productRepository.findOne({
+        where: { id: productId },
+      });
 
-    if (!company || !product) {
-      throw new Error('Company or Product not found');
+      if (!company || !product) {
+        throw new NotFoundException('Company or Product not found');
+      }
+
+      const favoriteList = await this.favoriteListRepository.findOne({
+        where: { company: { id: company.id } },
+        relations: ['products'], // Ensure products relation is loaded
+      });
+      if (!favoriteList) {
+        return null;
+      }
+
+      favoriteList.products = favoriteList.products.filter(
+        (p) => p.id !== productId,
+      );
+      const newFavorites = await this.favoriteListRepository.save(favoriteList);
+      return newFavorites;
+    } catch (error) {
+      throw new Error(error.message);
     }
-
-    const favoriteList = await this.favoriteListRepository.findOne({
-      where: { company: { id: company.id } },
-      relations: ['products'], // Ensure products relation is loaded
-    });
-    if (!favoriteList) {
-      throw new Error('Favorite list not found');
-    }
-
-    favoriteList.products = favoriteList.products.filter(
-      (p) => p.id !== productId,
-    );
-    const newFavorites = await this.favoriteListRepository.save(favoriteList);
-    return newFavorites;
   }
 
   async find(companyId: UUID): Promise<FavoriteList> {
