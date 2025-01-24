@@ -47,4 +47,7 @@ export enum ErrorMessages {
   IS_UUID = 'El ID de la compania es invalido',
   ACCOUNT_TYPE = 'Los tipos de cuenta permitidos son:',
   PHONE_FORMAT = 'El formato del telefono es invalido',
+
+  // PRODUCT
+  PRODUCT_NOT_FOUND = 'No se encontro ningun producto con el id',
 }

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { ProductService } from './services/product.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from 'src/modules/user/user.entity';
@@ -24,12 +24,16 @@ import { DiscountListsController } from 'src/modules/product/controllers/discoun
 import { FavoriteListController } from 'src/modules/product/controllers/favoriteList.controller';
 import { BlackListController } from 'src/modules/product/controllers/blackList.controller';
 import { DiscountsList } from 'src/modules/product/entities/dicount-list.entity';
+import { ActivityLog } from 'src/modules/product/entities/prouct-activity-log.entity';
+import { JwtService } from '@nestjs/jwt';
+import { AuthGuard } from 'src/guards';
 
 @Module({
   imports: [
     Gs1Module,
     TypeOrmModule.forFeature([
       Product,
+      ActivityLog,
       DiscountsList,
       FavoriteList,
       BlackList,
@@ -59,6 +63,8 @@ import { DiscountsList } from 'src/modules/product/entities/dicount-list.entity'
     ProductMapper,
     ProductProcessor,
     UnitService,
+    JwtService,
+    AuthGuard,
   ],
   exports: [ProductService],
 })

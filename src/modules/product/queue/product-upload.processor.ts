@@ -10,6 +10,8 @@ import {
   SERVER_SENT_EVENTS,
 } from 'src/common/enum/serverSentEvents.enum';
 import { UUID } from 'crypto';
+import { Gs1ProductDto } from 'src/modules/product/dto/gs1-product.dto';
+import { Product } from 'src/modules/product/entities/product.entity';
 
 @Injectable()
 @Processor('products')
@@ -47,18 +49,33 @@ export class ProductProcessor {
 
   @Process('products-upload')
   async handleProductJob(job: Job<ProductQueueJobType>) {
-    const { gtin, price, companyId, upload_percent } = job.data;
+    const { gtin, price, companyId, userId, fileName, upload_percent } =
+      job.data;
     try {
       if (!gtin) {
         return;
       }
-      let productData = await this.gs1Service.getProductByGTIN(gtin);
-      productData = {
-        ...productData,
-        price: price,
-      };
+      // we check if the product already exists in our database if not we go to GS1
+      let productData: Gs1ProductDto | Product =
+        await this.productService.getProductByGTIN(gtin);
+      if (!productData) {
+        productData = await this.gs1Service.getProductByGTIN(gtin);
+      }
+      if (productData instanceof Product) {
+        productData.price = price;
+      } else {
+        productData = {
+          ...productData,
+          price: price,
+        } as Gs1ProductDto;
+      }
       this.onProductChange(gtin, companyId, upload_percent); // Emit the event
-      await this.productService.addProduct(productData, companyId);
+      await this.productService.addProduct(
+        productData,
+        userId,
+        companyId,
+        fileName,
+      );
     } catch (error) {
       console.error(`Error processing GTIN ${gtin}:`, error);
     }

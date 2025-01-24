@@ -10,6 +10,8 @@ import {
   Logger,
   UnsupportedMediaTypeException,
   BadRequestException,
+  Request,
+  UseGuards,
 } from '@nestjs/common';
 import { ProductService } from '../services/product.service';
 import { SearchProductsDto } from 'src/modules/product/dto/search-products.dto';
@@ -23,6 +25,10 @@ import { Gs1Service } from 'src/modules/gs1/gs1.service';
 import { PrdouctInlistDto } from 'src/modules/product/dto/prdouct-in-list.dto';
 import { TransformInterceptor } from 'src/interceptors/response.interceptor';
 import { ResponseMessage } from 'src/decorators/response_message.decorator';
+import { AuthGuard } from 'src/guards';
+import { RequestUserDto } from 'src/modules/auth/dto/auth.dto';
+import { ProductMetadataDto } from 'src/modules/product/dto/product-metadata.dto';
+import { ApiResponse } from '@nestjs/swagger';
 
 @Controller('/product')
 @UseInterceptors(TransformInterceptor)
@@ -92,13 +98,24 @@ export class ProductController {
    */
   @Post('/add/:companyId/')
   @UseInterceptors(FileInterceptor('file'))
+  @UseGuards(AuthGuard)
   async addSingleProduct(
     @Param('companyId') companyId: UUID,
     @Body() product: GtinProductDto,
+    @Request() req: RequestUserDto,
   ): Promise<Product> {
-    const productData = await this.gs1Service.getProductByGTIN(product.gtin);
+    // Fetch product data using GTIN in our database if not we search in GS1
+    let productData = await this.productService.getProductByGTIN(product.gtin);
+    if (!productData) {
+      productData = await this.gs1Service.getProductByGTIN(product.gtin);
+    }
     productData.price = product.price;
-    return await this.productService.addProduct(productData, companyId);
+    const user = req.user;
+    return await this.productService.addProduct(
+      productData,
+      user.id as UUID,
+      companyId,
+    );
   }
 
   /**
@@ -114,11 +131,15 @@ export class ProductController {
   @Post('/upload/:companyId/')
   @ResponseMessage('Productos agregados a la cola con exito!')
   @UseInterceptors(FileInterceptor('file'))
+  @UseGuards(AuthGuard)
   async uploadProductsFromExcel(
     @Param('companyId') companyId: UUID,
     @UploadedFile() file: Express.Multer.File,
+    @Request() req: RequestUserDto,
   ): Promise<void> {
     try {
+      const user = req.user;
+
       if (!file) {
         throw new BadRequestException('File is not provided');
       }
@@ -152,12 +173,26 @@ export class ProductController {
       // Add products to queue for processing
       const params = {
         products,
+        userId: user.id as UUID,
         companyId,
+        fileName: file.originalname,
       };
       await this.productQueueService.addProductsToQueue(params);
     } catch (error) {
       this.logger.error('Error uploading products:', error);
       throw error;
     }
+  }
+
+  @Get('/metadata/:productId/')
+  @UseGuards(AuthGuard)
+  @ApiResponse({ type: ProductMetadataDto })
+  async getProductMetadata(
+    @Param('productId') productId: UUID,
+  ): Promise<ProductMetadataDto> {
+    const productMetadata = await this.productService.getProductMetadata(
+      productId,
+    );
+    return productMetadata;
   }
 }

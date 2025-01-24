@@ -31,12 +31,11 @@ import { UserService } from '../../modules/user/user.service';
 import {
   AddUserDto,
   AuthDto,
-  RefreshTokenDto,
+  RequestUserDto,
   RefreshTokenResponseDto,
 } from './dto/auth.dto';
 import { RefreshGuard } from '../../guards/refresh.guard';
 import { Emails } from 'src/common/enum';
-import { AuthGuard } from 'src/guards/auth.guard';
 import { AuthenticatedRequest } from 'src/common/interface/AuthenticatedRequest.inteeface';
 import { ApiTags } from '@nestjs/swagger';
 
@@ -168,7 +167,7 @@ export class AuthController {
   @Get('/refresh')
   @ResponseMessage('Token refresh success!')
   async refreshToken(
-    @Request() req: RefreshTokenDto,
+    @Request() req: RequestUserDto,
     @Res({ passthrough: true }) response: Response,
   ) {
     console.log('refreshed');

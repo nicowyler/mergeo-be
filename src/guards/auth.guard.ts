@@ -35,7 +35,7 @@ export class AuthGuard implements CanActivate {
       if (error.name === 'TokenExpiredError') {
         throw new ForbiddenException(error, 'Token has expired');
       } else {
-        throw new Error(error);
+        throw error;
       }
     }
 

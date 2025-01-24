@@ -4,6 +4,7 @@ import { BuyOrderProduct } from 'src/modules/buy-order/entities/buy-order-produc
 import { Company } from 'src/modules/company/entities/company.entity';
 import { PreOrderProduct } from 'src/modules/pre-order/entities/pre-order-product.entity';
 import { DiscountsList } from 'src/modules/product/entities/dicount-list.entity';
+import { ActivityLog } from 'src/modules/product/entities/prouct-activity-log.entity';
 import {
   Column,
   Entity,
@@ -90,4 +91,7 @@ export class Product extends DateAudit {
   @ManyToMany(() => DiscountsList, (discountsList) => discountsList.products)
   @JoinTable() // Defines the join table
   lists: DiscountsList[];
+
+  @OneToMany(() => ActivityLog, (activityLog) => activityLog.product)
+  userActivity: ActivityLog[];
 }

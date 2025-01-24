@@ -1,4 +1,10 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import {
+  ConflictException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { Product } from 'src/modules/product/entities/product.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -15,10 +21,17 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { Unit } from 'src/modules/product/entities/unit.entity';
 import { DiscountsList } from 'src/modules/product/entities/dicount-list.entity';
+import { ProductMetadataDto } from 'src/modules/product/dto/product-metadata.dto';
+import { User } from 'src/modules/user/user.entity';
+import { ActivityLog } from 'src/modules/product/entities/prouct-activity-log.entity';
+import { ActivityEnum } from 'src/common/enum/activityLog.enum';
+import { ErrorMessages } from 'src/common/enum';
+import { plainToClass } from 'class-transformer';
 
 @Injectable()
 export class ProductService {
   private readonly logger = new Logger(ProductService.name);
+  private readonly appName = process.env.APP_NAME;
 
   constructor(
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
@@ -26,12 +39,16 @@ export class ProductService {
     private readonly productRepository: Repository<Product>,
     @InjectRepository(DiscountsList)
     private readonly discountListRepository: Repository<DiscountsList>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     @InjectRepository(Company)
     private readonly companyRepository: Repository<Company>,
     @InjectRepository(BlackList)
     private readonly blackListRepository: Repository<BlackList>,
     @InjectRepository(Unit)
     private readonly unitsRepository: Repository<Unit>,
+    @InjectRepository(ActivityLog)
+    private readonly activityLogRepository: Repository<ActivityLog>,
     private readonly productMapper: ProductMapper,
   ) {}
 
@@ -91,6 +108,27 @@ export class ProductService {
   }
 
   /**
+   * Finds a product by its unique identifier.
+   *
+   * @param id - The unique identifier (UUID) of the product to find.
+   * @returns A promise that resolves to the product entity if found, or null if not found.
+   */
+  async getProductByGTIN(gtin: string) {
+    const product = await this.productRepository.findOne({ where: { gtin } });
+    if (!product) {
+      return null;
+    }
+    product.created = new Date();
+    product.updated = new Date();
+    const newProduct = plainToClass(Product, product);
+
+    this.logger.log(
+      `Product with gtin ${gtin} and name ${product.name} found in ${this.appName} database`,
+    );
+    return newProduct;
+  }
+
+  /**
    * Adds a product to the database. If a product with the same GTIN already exists for the company,
    * it updates the existing product. Otherwise, it creates a new product.
    *
@@ -100,51 +138,91 @@ export class ProductService {
    * @throws {Error} If the company with the given ID is not found.
    */
   async addProduct(
-    productDto: Gs1ProductDto,
+    productDto: Gs1ProductDto | Product,
+    userId: UUID,
     companyId: UUID,
+    fileName?: string,
   ): Promise<Product> {
-    this.logger.log(`Adding product: ${JSON.stringify(productDto)}`);
+    try {
+      this.logger.log(`Adding product: ${JSON.stringify(productDto)}`);
 
-    // Transform product data
-    const productData = await this.productMapper.transformToEntity(productDto);
-    const calculatedProduct = await this.calculatePriceBaseUnit(productData);
-    productData.pricePerBaseUnit = calculatedProduct.pricePerBaseUnit;
-
-    // Fetch related entities
-    const company = await this.companyRepository.findOne({
-      where: { id: companyId },
-    });
-    if (!company) {
-      throw new Error(`Company with ID ${companyId} not found`);
-    }
-
-    productData.company = company;
-
-    // Check if a product with the same GTIN exists for the company
-    let product = await this.productRepository.findOne({
-      where: {
-        gtin: productDto.GTIN,
-        company: { id: companyId },
-      },
-      relations: ['company'],
-    });
-
-    if (product) {
-      // Update the product if it already exists
-      this.logger.log(
-        `Product with GTIN ${productDto.GTIN} already exists for company ${companyId}. Updating product.`,
+      // Transform product data
+      const productData = await this.productMapper.transformToEntity(
+        productDto,
       );
-      product = this.productRepository.merge(product, productData);
-    } else {
-      // Create a new product for the company
-      this.logger.log(
-        `Product with GTIN ${productDto.GTIN} does not exist for company ${companyId}. Creating new product.`,
-      );
-      product = this.productRepository.create(productData);
-    }
+      const calculatedProduct = await this.calculatePriceBaseUnit(productData);
+      productData.pricePerBaseUnit = calculatedProduct.pricePerBaseUnit;
 
-    // Save the product
-    return this.productRepository.save(product);
+      // Fetch related entities
+      const company = await this.companyRepository.findOne({
+        where: { id: companyId },
+      });
+      if (!company) {
+        throw new Error(`Company with ID ${companyId} not found`);
+      }
+
+      productData.company = company;
+
+      // Check if a product with the same GTIN exists for the company
+      let product = await this.productRepository.findOne({
+        where: {
+          gtin: productData.gtin,
+          company: { id: companyId },
+        },
+        relations: ['company'],
+      });
+
+      if (product) {
+        const differences = this.getDifferences(productData, product);
+
+        if (differences === null) {
+          return product;
+        }
+        // Update the product if it already exists
+        this.logger.log(
+          `Product with GTIN ${
+            product.gtin
+          } already exists for company ${companyId}. Updating product with
+        ${JSON.stringify(differences)}`,
+        );
+
+        await this.saveActivityAndMetadata(
+          product.id,
+          userId,
+          ActivityEnum.UPDATED,
+          JSON.stringify(differences),
+          fileName ? fileName : null,
+        );
+
+        product = await this.productRepository.merge(product, productData);
+        return this.productRepository.save(product);
+      } else {
+        // Create a new product for the company
+        this.logger.log(
+          `Product with GTIN ${productData.gtin} does not exist for company ${companyId}. Creating new product.`,
+        );
+
+        product = await this.productRepository.create(productData);
+
+        await this.saveActivityAndMetadata(
+          product.id,
+          userId,
+          ActivityEnum.CREATED,
+          'Producto cargado manualmente',
+          fileName ? fileName : null,
+        );
+        return this.productRepository.save(product);
+      }
+
+      // Save the product
+    } catch (error) {
+      this.logger.error(error);
+      if (error.code === '23505') {
+        throw new ConflictException(
+          'El producto con Gtin/Ean ya está registrado en la empresa',
+        );
+      } else throw error;
+    }
   }
 
   /**
@@ -514,5 +592,123 @@ export class ProductService {
     });
 
     return discountedProducts;
+  }
+
+  /**
+   * Retrieves the metadata for a specific product by its ID.
+   *
+   * @param {UUID} productId - The unique identifier of the product.
+   * @returns {Promise<ProductMetadataDto>} - A promise that resolves to an object containing the product metadata.
+   * @throws {Error} If the product is not found.
+   */
+  async getProductMetadata(productId: UUID): Promise<ProductMetadataDto> {
+    const product = await this.productRepository
+      .createQueryBuilder('product')
+      .leftJoinAndSelect('product.lists', 'discountList') // Include discount lists
+      .leftJoinAndSelect('product.userActivity', 'activityLog')
+      .leftJoinAndSelect('activityLog.user', 'user') // Include user details
+      .where('product.id = :productId', { productId })
+      .getOne();
+
+    if (!product) {
+      throw new Error('Product not found');
+    }
+
+    return {
+      id: product.id,
+      name: product.name,
+      created: product.created,
+      updated: product.updated,
+      metadata: {
+        belongsToDiscountLists: product.lists.map((list) => ({
+          id: list.id,
+          name: list.name,
+          description: list.description,
+          discount: list.discount,
+        })),
+      },
+      userActivity: product.userActivity.map((activity) => ({
+        action: activity.action,
+        timestamp: activity.timestamp,
+        user: activity.user ? activity.user.email : 'Unknown',
+        details: JSON.parse(activity.details),
+      })),
+    };
+  }
+
+  /**
+   * Logs an activity and saves metadata for a product
+   * @param productId - ID of the product
+   * @param action - Activity action (created, updated, deleted)
+   * @param user - The user performing the action
+   * @param metadata - Additional metadata (e.g., filename)
+   */
+  async saveActivityAndMetadata(
+    productId: UUID,
+    userId: UUID,
+    action: ActivityEnum,
+    details?: string,
+    fileName?: string,
+  ): Promise<void> {
+    // Fetch the product
+    const product = await this.productRepository.findOneBy({ id: productId });
+    if (!product) {
+      throw new NotFoundException(ErrorMessages.PRODUCT_NOT_FOUND);
+    }
+
+    const user = await this.userRepository.findOneBy({ id: userId });
+    if (!user) {
+      throw new Error('Product not found');
+    }
+
+    // Create the activity log
+    const activityLog = this.activityLogRepository.create({
+      action,
+      product,
+      user,
+      fileName: fileName,
+      details: details,
+    });
+
+    // Save activity log
+    await this.activityLogRepository.save(activityLog);
+  }
+
+  private getDifferences(
+    newProduct: Partial<Product>,
+    oldProduct: Partial<Product>,
+  ): Record<string, { old: any; new: any }> | string {
+    const changes: Record<string, { old: any; new: any }> = {};
+
+    for (const key in oldProduct) {
+      if (key === 'created' || key === 'updated' || key === 'id') {
+        continue; // Skip 'id', 'created' and 'updated' fields
+      }
+      const oldValue = oldProduct[key];
+      const newValue = newProduct[key];
+
+      // Normalize values to compare them logically
+      const normalizedOldValue =
+        oldValue !== null && oldValue !== undefined ? String(oldValue) : '';
+      const normalizedNewValue =
+        newValue !== null && newValue !== undefined ? String(newValue) : '';
+
+      // Compare normalized values
+      if (normalizedOldValue !== normalizedNewValue) {
+        changes[key] = { old: oldValue, new: newValue };
+      }
+    }
+
+    // Remove unchanged fields from nested objects
+    for (const key in changes) {
+      const { old, new: newVal } = changes[key];
+      if (typeof old === 'object' && typeof newVal === 'object') {
+        if (JSON.stringify(old) === JSON.stringify(newVal)) {
+          delete changes[key]; // Remove if nested object is identical
+        }
+      }
+    }
+
+    return Object.keys(changes).length > 0 ? changes : null;
   }
 }

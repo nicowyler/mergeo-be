@@ -64,7 +64,7 @@ export class RefreshTokenResponseDto {
   tokens: TokensDto;
 }
 
-export class RefreshTokenDto {
+export class RequestUserDto {
   user: UserDto;
 }
 

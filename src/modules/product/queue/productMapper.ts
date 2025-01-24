@@ -13,7 +13,14 @@ export class ProductMapper {
    * @param dto - The Gs1ProductDto object containing product data.
    * @returns A promise that resolves to a Partial<Product> entity.
    */
-  async transformToEntity(dto: Gs1ProductDto): Promise<Partial<Product>> {
+  async transformToEntity(
+    dto: Gs1ProductDto | Product,
+  ): Promise<Partial<Product>> {
+    if (dto instanceof Product) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { id, ...dtoWithoutId } = dto;
+      return dtoWithoutId;
+    }
     return {
       gtin: dto.GTIN,
       name: dto.Descripcion || dto.DescripcionGTIN14 || 'Unknown Product',

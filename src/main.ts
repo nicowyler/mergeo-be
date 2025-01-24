@@ -27,14 +27,16 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
 
-  const config = new DocumentBuilder()
-    .setTitle('Mergeo API')
-    .setDescription('Mergeo API documentation')
-    .setVersion('1.0')
-    .addTag('Mergeo')
-    .build();
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('docs', app, document);
+  if (process.env.ENABLE_SWAGGER === 'true') {
+    const config = new DocumentBuilder()
+      .setTitle('Mergeo API')
+      .setDescription('Mergeo API documentation')
+      .setVersion('1.0')
+      .addTag('Mergeo')
+      .build();
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('docs', app, document);
+  }
 
   await app.listen(AppModule.port);
 }

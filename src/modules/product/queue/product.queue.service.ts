@@ -7,12 +7,16 @@ import { UUID } from 'crypto';
 export type ProductQueueType = {
   products: GtinProductDto[];
   companyId: UUID;
+  userId: UUID;
+  fileName?: string;
 };
 
 export type ProductQueueJobType = {
   gtin: string;
   price: number;
   companyId: UUID;
+  userId: UUID;
+  fileName?: string;
   upload_percent: number;
 };
 
@@ -29,7 +33,7 @@ export class ProductQueueService {
    * @returns {Promise<void>} A promise that resolves when the products have been added to the queue.
    */
   async addProductsToQueue(params: ProductQueueType) {
-    const { products, companyId } = params;
+    const { products, companyId, userId, fileName } = params;
     await this.productQueue.addBulk(
       products.map((product: GtinProductDto, index: number) => ({
         name: 'products-upload',
@@ -38,6 +42,8 @@ export class ProductQueueService {
           gtin: product.gtin,
           price: product.price,
           companyId: companyId,
+          userId: userId,
+          fileName: fileName,
         },
       })),
     );
