@@ -57,7 +57,7 @@ export class ProductProcessor {
       }
       // we check if the product already exists in our database if not we go to GS1
       let productData: Gs1ProductDto | Product =
-        await this.productService.getProductByGTIN(gtin);
+        await this.productService.getProductLocallyByGTIN(gtin);
       if (!productData) {
         productData = await this.gs1Service.getProductByGTIN(gtin);
       }

@@ -27,6 +27,11 @@ import { ActivityLog } from 'src/modules/product/entities/prouct-activity-log.en
 import { ActivityEnum } from 'src/common/enum/activityLog.enum';
 import { ErrorMessages } from 'src/common/enum';
 import { plainToClass } from 'class-transformer';
+import {
+  ProviderProductResponseDto,
+  ProviderSearchPrdoucDto,
+} from 'src/modules/product/dto/provider-search-products.dto';
+import { Gs1Service } from 'src/modules/gs1/gs1.service';
 
 @Injectable()
 export class ProductService {
@@ -49,8 +54,78 @@ export class ProductService {
     private readonly unitsRepository: Repository<Unit>,
     @InjectRepository(ActivityLog)
     private readonly activityLogRepository: Repository<ActivityLog>,
+    private readonly gs1Setrvice: Gs1Service,
     private readonly productMapper: ProductMapper,
   ) {}
+
+  /**
+   * Searches all products(not only own by this company) based on the provided search criteria.
+   * If the product already exists in the company's inventory, it returns the product along with a flag indicating that it
+   * is already in the company's inventory.
+   *
+   * @param {ProviderSearchPrdoucDto} searchProductsDto - The DTO containing search criteria.
+   * @param {string} searchProductsDto.name - The name of the product to search for.
+   * @param {string} searchProductsDto.brand - The brand of the product to search for.
+   * @param {string} searchProductsDto.ean - The EAN of the product to search for.
+   * @param {number} searchProductsDto.companyId - The ID of the company to search within.
+   *
+   * @returns {Promise<ProviderProductResponseDto[]>} A promise that resolves to an array of products matching the search criteria,
+   * each product includes a flag indicating if it is related to the specified company.
+   */
+  async searchProviderProducts(searchProductsDto: ProviderSearchPrdoucDto) {
+    const { name, brand, ean, companyId } = searchProductsDto;
+
+    if (ean) {
+      return this.searchProductByEan(ean, companyId);
+    } else {
+      const queryBuilder = this.productRepository
+        .createQueryBuilder('product')
+        .distinctOn(['product.gtin'])
+        .leftJoin('product.company', 'company')
+        .orderBy('product.gtin')
+        .addOrderBy(
+          'CASE WHEN company.id = :companyId THEN 0 ELSE 1 END',
+          'ASC',
+        )
+        .addOrderBy('product.id');
+
+      if (name) {
+        queryBuilder.andWhere('LOWER(product.name) LIKE LOWER(:name)', {
+          name: `%${name}%`,
+        });
+      }
+
+      if (brand) {
+        queryBuilder.andWhere('LOWER(product.brand) LIKE LOWER(:brand)', {
+          brand: `%${brand}%`,
+        });
+      }
+      queryBuilder.setParameter('companyId', companyId);
+      // Execute the query
+      const results = await queryBuilder.getRawAndEntities();
+
+      const productsWithRelation = await Promise.all(
+        results.entities.map(async (product) => {
+          const isRelated =
+            (await this.productRepository
+              .createQueryBuilder('product')
+              .innerJoin('product.company', 'company')
+              .where('company.id = :companyId', { companyId })
+              .andWhere('product.id = :productId', { productId: product.id })
+              .getCount()) > 0;
+
+          return {
+            ...plainToClass(ProviderProductResponseDto, product, {
+              excludeExtraneousValues: true,
+            }),
+            inInventory: isRelated, // Add the relation flag
+          };
+        }),
+      );
+
+      return productsWithRelation;
+    }
+  }
 
   /**
    * Searches for products based on the provided criteria.
@@ -63,7 +138,10 @@ export class ProductService {
    * @param searchProductsDto.netContent - The net content of the product to search for (optional).
    * @returns A promise that resolves to an array of products matching the search criteria.
    */
-  async searchProduct(companyId: UUID, searchProductsDto: PrdouctInlistDto) {
+  async searchProductInInventory(
+    companyId: UUID,
+    searchProductsDto: PrdouctInlistDto,
+  ) {
     const { name, brand, netContent } = searchProductsDto;
 
     const queryBuilder = this.productRepository.createQueryBuilder('product');
@@ -113,7 +191,7 @@ export class ProductService {
    * @param id - The unique identifier (UUID) of the product to find.
    * @returns A promise that resolves to the product entity if found, or null if not found.
    */
-  async getProductByGTIN(gtin: string) {
+  async getProductLocallyByGTIN(gtin: string) {
     const product = await this.productRepository.findOne({ where: { gtin } });
     if (!product) {
       return null;
@@ -710,5 +788,49 @@ export class ProductService {
     }
 
     return Object.keys(changes).length > 0 ? changes : null;
+  }
+
+  /**
+   * Searches for a product by its EAN (European Article Number) and checks if it belongs to a specific company.
+   *
+   * @param ean - The EAN of the product to search for.
+   * @param companyId - The UUID of the company to check the product against.
+   * @returns A promise that resolves to an array containing the product data and a flag indicating if the product is related to the company.
+   * @throws NotFoundException - If the product is not found in both the local database and GS1 service.
+   */
+  private async searchProductByEan(ean: string, companyId: UUID) {
+    if (ean) {
+      // Search the product in your local database
+      let product = await this.getProductLocallyByGTIN(ean);
+
+      if (product) {
+        // Check if the product belongs to the company
+        const isRelated =
+          (await this.productRepository
+            .createQueryBuilder('product')
+            .innerJoin('product.company', 'company')
+            .where('company.id = :companyId', { companyId })
+            .andWhere('product.id = :productId', { productId: product.id })
+            .getCount()) > 0;
+
+        // Map product to DTO and include the flag
+        const result = plainToClass(ProviderProductResponseDto, product, {
+          excludeExtraneousValues: true,
+        });
+
+        return [{ ...result, inInventory: isRelated }];
+      }
+
+      // If not found locally, search in GS1
+      product = await this.gs1Setrvice.getProductByGTIN(ean);
+      if (!product) {
+        throw new NotFoundException(ErrorMessages.PRODUCT_NOT_FOUND);
+      }
+
+      // Transform GS1 product data to entity
+      const productData = await this.productMapper.transformToEntity(product);
+
+      return [{ ...productData, inInventory: false }]; // Return GS1 product without isRelated flag
+    }
   }
 }

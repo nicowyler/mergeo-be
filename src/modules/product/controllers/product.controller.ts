@@ -29,6 +29,7 @@ import { AuthGuard } from 'src/guards';
 import { RequestUserDto } from 'src/modules/auth/dto/auth.dto';
 import { ProductMetadataDto } from 'src/modules/product/dto/product-metadata.dto';
 import { ApiResponse } from '@nestjs/swagger';
+import { ProviderSearchPrdoucDto } from 'src/modules/product/dto/provider-search-products.dto';
 
 @Controller('/product')
 @UseInterceptors(TransformInterceptor)
@@ -44,19 +45,41 @@ export class ProductController {
   /** ################### PRODUCTS ###################*/
   /**
    * PROVIDER PRODUCTS SEARCH
-   * Searches for products by GS1 code.
+   * Searches for products without taking into account the company.
+   *
+   * @param companyId - The UUID of the company.
+   * @param productSearch - The product search criteria.
+   * @returns The search results from the product service.
+   */
+  @Get('/search/')
+  async searchProviderProducts(
+    @Query() productSearch: ProviderSearchPrdoucDto,
+  ) {
+    this.logger.log('searching for product', productSearch);
+    const products = await this.productService.searchProviderProducts(
+      productSearch,
+    );
+    return { products, count: products.length };
+  }
+
+  /**
+   * PROVIDER PRODUCTS SEARCH
+   * Searches for products in company inventory.
    *
    * @param companyId - The UUID of the company.
    * @param productSearch - The product search criteria.
    * @returns The search results from the product service.
    */
   @Get('/search/:companyId')
-  searchProductsByGS1(
+  searchProductInInventory(
     @Param('companyId') companyId: UUID,
-    @Query() productSearch: PrdouctInlistDto,
+    @Query() productSearch: ProviderSearchPrdoucDto,
   ) {
-    this.logger.log('GS1 search hit', productSearch);
-    return this.productService.searchProduct(companyId, productSearch);
+    this.logger.log('searching for product', productSearch);
+    return this.productService.searchProductInInventory(
+      companyId,
+      productSearch,
+    );
   }
 
   /**
@@ -105,7 +128,9 @@ export class ProductController {
     @Request() req: RequestUserDto,
   ): Promise<Product> {
     // Fetch product data using GTIN in our database if not we search in GS1
-    let productData = await this.productService.getProductByGTIN(product.gtin);
+    let productData = await this.productService.getProductLocallyByGTIN(
+      product.gtin,
+    );
     if (!productData) {
       productData = await this.gs1Service.getProductByGTIN(product.gtin);
     }
