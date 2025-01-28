@@ -28,6 +28,7 @@ import { ActivityEnum } from 'src/common/enum/activityLog.enum';
 import { ErrorMessages } from 'src/common/enum';
 import { plainToClass } from 'class-transformer';
 import {
+  ProductResponseDto,
   ProviderProductResponseDto,
   ProviderSearchPrdoucDto,
 } from 'src/modules/product/dto/provider-search-products.dto';
@@ -74,58 +75,69 @@ export class ProductService {
    * each product includes a flag indicating if it is related to the specified company.
    */
   async searchProviderProducts(searchProductsDto: ProviderSearchPrdoucDto) {
-    const { name, brand, ean, companyId } = searchProductsDto;
+    const { name, brand, ean, companyId, includeInventory } = searchProductsDto;
 
     if (ean) {
       return this.searchProductByEan(ean, companyId);
-    } else {
-      const queryBuilder = this.productRepository
-        .createQueryBuilder('product')
-        .distinctOn(['product.gtin'])
-        .leftJoin('product.company', 'company')
-        .orderBy('product.gtin')
-        .addOrderBy(
-          'CASE WHEN company.id = :companyId THEN 0 ELSE 1 END',
-          'ASC',
-        )
-        .addOrderBy('product.id');
-
-      if (name) {
-        queryBuilder.andWhere('LOWER(product.name) LIKE LOWER(:name)', {
-          name: `%${name}%`,
-        });
-      }
-
-      if (brand) {
-        queryBuilder.andWhere('LOWER(product.brand) LIKE LOWER(:brand)', {
-          brand: `%${brand}%`,
-        });
-      }
-      queryBuilder.setParameter('companyId', companyId);
-      // Execute the query
-      const results = await queryBuilder.getRawAndEntities();
-
-      const productsWithRelation = await Promise.all(
-        results.entities.map(async (product) => {
-          const isRelated =
-            (await this.productRepository
-              .createQueryBuilder('product')
-              .innerJoin('product.company', 'company')
-              .where('company.id = :companyId', { companyId })
-              .andWhere('product.id = :productId', { productId: product.id })
-              .getCount()) > 0;
-
-          return {
-            ...plainToClass(ProviderProductResponseDto, product, {
-              excludeExtraneousValues: true,
-            }),
-            inInventory: isRelated, // Add the relation flag
-          };
-        }),
-      );
-
-      return productsWithRelation;
     }
+
+    const queryBuilder = this.productRepository
+      .createQueryBuilder('product')
+      .distinctOn(['product.gtin'])
+      .leftJoin('product.company', 'company') // Join to check product-company relationships
+      .orderBy('product.gtin')
+      .addOrderBy('CASE WHEN company.id = :companyId THEN 0 ELSE 1 END', 'ASC')
+      .addOrderBy('product.id');
+
+    // If includeInventory is true, search products belonging to the company
+    if (includeInventory) {
+      queryBuilder.where('company.id = :companyId', { companyId });
+    } else {
+      // Exclude products already in the company inventory
+      queryBuilder.where((qb) => {
+        const subQuery = qb
+          .subQuery()
+          .select('product.gtin')
+          .from('product', 'product')
+          .innerJoin('product.company', 'company')
+          .where('company.id = :companyId')
+          .getQuery();
+        return `product.gtin NOT IN ${subQuery}`;
+      });
+    }
+
+    // Apply additional search filters
+    if (name) {
+      queryBuilder.andWhere('LOWER(product.name) LIKE LOWER(:name)', {
+        name: `%${name}%`,
+      });
+    }
+
+    if (brand) {
+      queryBuilder.andWhere('LOWER(product.brand) LIKE LOWER(:brand)', {
+        brand: `%${brand}%`,
+      });
+    }
+
+    queryBuilder.setParameter('companyId', companyId);
+
+    // Execute the query
+    const results = await queryBuilder.getMany();
+
+    // Map results to DTO
+    const productsWithRelation = results.map((product) => {
+      if (includeInventory) {
+        return plainToClass(ProductResponseDto, product, {
+          excludeExtraneousValues: true,
+        });
+      } else {
+        return plainToClass(ProviderProductResponseDto, product, {
+          excludeExtraneousValues: true,
+        });
+      }
+    });
+
+    return productsWithRelation;
   }
 
   /**
@@ -156,12 +168,6 @@ export class ProductService {
     if (brand) {
       queryBuilder.andWhere('LOWER(product.brand) LIKE LOWER(:brand)', {
         brand: `%${brand}%`,
-      });
-    }
-
-    if (netContent) {
-      queryBuilder.andWhere('product.net_content = :netContent', {
-        netContent: netContent,
       });
     }
 

@@ -1,4 +1,4 @@
-import { IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsNumber, IsOptional, IsString } from 'class-validator';
 import { Expose, Transform } from 'class-transformer';
 import { UUID } from 'crypto';
 
@@ -18,6 +18,11 @@ export class ProviderSearchPrdoucDto {
   @IsOptional()
   @IsString()
   companyId?: UUID;
+
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => value === 'true' || value === true)
+  includeInventory?: boolean;
 }
 
 export class ProviderProductResponseDto {
@@ -93,4 +98,21 @@ export class ProviderProductResponseDto {
   @IsString()
   @IsOptional()
   manufacturer_country?: string;
+}
+
+export class ProductResponseDto extends ProviderProductResponseDto {
+  @Expose()
+  @IsNumber()
+  @IsOptional()
+  id?: UUID;
+
+  @Expose()
+  @IsNumber()
+  @IsOptional()
+  price?: number;
+
+  @Expose()
+  @IsNumber()
+  @IsOptional()
+  updated?: Date;
 }
