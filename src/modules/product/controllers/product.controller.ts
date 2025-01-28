@@ -120,27 +120,20 @@ export class ProductController {
    * @returns A promise that resolves to the added product.
    */
   @Post('/add/:companyId/')
-  @UseInterceptors(FileInterceptor('file'))
   @UseGuards(AuthGuard)
   async addSingleProduct(
     @Param('companyId') companyId: UUID,
-    @Body() product: GtinProductDto,
+    @Body() products: GtinProductDto[],
     @Request() req: RequestUserDto,
-  ): Promise<Product> {
-    // Fetch product data using GTIN in our database if not we search in GS1
-    let productData = await this.productService.getProductLocallyByGTIN(
-      product.gtin,
-    );
-    if (!productData) {
-      productData = await this.gs1Service.getProductByGTIN(product.gtin);
-    }
-    productData.price = product.price;
-    const user = req.user;
-    return await this.productService.addProduct(
-      productData,
-      user.id as UUID,
+  ): Promise<Product[]> {
+    const userId = req.user.id as UUID;
+    const addedProducts = await this.productService.addMultipleProducts(
+      products,
+      userId,
       companyId,
     );
+
+    return addedProducts;
   }
 
   /**

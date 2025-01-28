@@ -32,6 +32,7 @@ import {
   ProviderSearchPrdoucDto,
 } from 'src/modules/product/dto/provider-search-products.dto';
 import { Gs1Service } from 'src/modules/gs1/gs1.service';
+import { GtinProductDto } from 'src/modules/product/dto/gtinProduct.dto';
 
 @Injectable()
 export class ProductService {
@@ -204,6 +205,43 @@ export class ProductService {
       `Product with gtin ${gtin} and name ${product.name} found in ${this.appName} database`,
     );
     return newProduct;
+  }
+
+  /**
+   * Adds multiple products to the database.
+   * It uses the `addProduct` method to save each product individually.
+   *
+   * @param {Gs1ProductDto} productDto - The data transfer object containing product information.
+   * @param {UUID} companyId - The unique identifier of the company to which the product belongs.
+   * @returns {Promise<Product>} The saved product entity.
+   * @throws {Error} If the company with the given ID is not found.
+   */
+  async addMultipleProducts(
+    products: GtinProductDto[] | Product[],
+    userId: UUID,
+    companyId: UUID,
+  ): Promise<Product[]> {
+    try {
+      const savedProducts: Product[] = [];
+
+      for (const product of products) {
+        const transformedProduct = plainToClass(Product, product);
+        const addedProduct = await this.addProduct(
+          transformedProduct,
+          userId,
+          companyId,
+        );
+        savedProducts.push(addedProduct);
+      }
+      return savedProducts;
+    } catch (error) {
+      this.logger.error(error);
+      if (error.code === '23505') {
+        throw new ConflictException(
+          'El producto con Gtin/Ean ya está registrado en la empresa',
+        );
+      } else throw error;
+    }
   }
 
   /**
