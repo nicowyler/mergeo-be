@@ -324,7 +324,8 @@ export class ProductService {
           `Product with GTIN ${productData.gtin} does not exist for company ${companyId}. Creating new product.`,
         );
 
-        product = await this.productRepository.create(productData);
+        product = this.productRepository.create(productData);
+        product = await this.productRepository.save(product);
 
         await this.saveActivityAndMetadata(
           product.id,
@@ -333,7 +334,8 @@ export class ProductService {
           'Producto cargado manualmente',
           fileName ? fileName : null,
         );
-        return this.productRepository.save(product);
+
+        return product;
       }
 
       // Save the product
@@ -720,6 +722,83 @@ export class ProductService {
    * Retrieves the metadata for a specific product by its ID.
    *
    * @param {UUID} productId - The unique identifier of the product.
+   * @returns {Promise<Product>} - A promise that resolves to an object containing the product metadata.
+   * @throws {Error} If the product is not found.
+   */
+  async getProductById(productId: UUID): Promise<Product> {
+    const product = await this.productRepository.findOneBy({ id: productId });
+
+    if (!product) {
+      throw new Error('Product not found');
+    }
+
+    return product;
+  }
+
+  /**
+   * Retrieves the metadata for a specific product by its ID.
+   *
+   * @param {UUID} productId - The unique identifier of the product.
+   * @returns {Promise<Product>} - A promise that resolves to an object containing the product metadata.
+   * @throws {Error} If the product is not found.
+   */
+  async editProductById(
+    productId: UUID,
+    userId: UUID,
+    changes: Partial<Product>,
+  ): Promise<Product> {
+    const product = await this.productRepository.findOneBy({ id: productId });
+
+    if (!product) {
+      throw new Error('Product not found');
+    }
+
+    const differences: { [key: string]: string | number } = {};
+
+    if (changes.description !== product.description) {
+      differences.description = changes.description;
+    }
+
+    if (changes.price !== product.price) {
+      differences.price = +changes.price; // Ensure it's stored as a number
+    }
+
+    const activityChanges: Record<
+      string,
+      { old: string | number; new: string | number }
+    > = {};
+
+    if (differences.description) {
+      activityChanges.description = {
+        old: product.description,
+        new: changes.description,
+      };
+    }
+
+    if (differences.price) {
+      activityChanges.price = { old: product.price, new: changes.price };
+    }
+
+    await this.saveActivityAndMetadata(
+      product.id,
+      userId,
+      ActivityEnum.UPDATED,
+      JSON.stringify(activityChanges),
+    );
+
+    product.description = changes.description || product.description;
+    product.price = changes.price || product.price;
+
+    product.updated = new Date();
+    this.productRepository.save(product);
+
+    return product;
+  }
+
+  /**
+   * Retrieves the metadata for a specific product by its ID.
+   *
+   * @param {UUID} productId - The unique identifier of the product.
    * @returns {Promise<ProductMetadataDto>} - A promise that resolves to an object containing the product metadata.
    * @throws {Error} If the product is not found.
    */
@@ -789,7 +868,7 @@ export class ProductService {
       product,
       user,
       fileName: fileName,
-      details: details,
+      details: JSON.stringify(details),
     });
 
     // Save activity log
@@ -857,12 +936,16 @@ export class ProductService {
             .andWhere('product.id = :productId', { productId: product.id })
             .getCount()) > 0;
 
+        if (isRelated) {
+          return [];
+        }
+
         // Map product to DTO and include the flag
         const result = plainToClass(ProviderProductResponseDto, product, {
           excludeExtraneousValues: true,
         });
 
-        return [{ ...result, inInventory: isRelated }];
+        return [{ ...result }];
       }
 
       // If not found locally, search in GS1

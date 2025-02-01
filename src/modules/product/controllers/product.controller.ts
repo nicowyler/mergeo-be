@@ -12,6 +12,7 @@ import {
   BadRequestException,
   Request,
   UseGuards,
+  Patch,
 } from '@nestjs/common';
 import { ProductService } from '../services/product.service';
 import { SearchProductsDto } from 'src/modules/product/dto/search-products.dto';
@@ -21,8 +22,6 @@ import * as xlsx from 'xlsx';
 import { GtinProductDto } from 'src/modules/product/dto/gtinProduct.dto';
 import { ProductQueueService } from 'src/modules/product/queue/product.queue.service';
 import { Product } from 'src/modules/product/entities/product.entity';
-import { Gs1Service } from 'src/modules/gs1/gs1.service';
-import { PrdouctInlistDto } from 'src/modules/product/dto/prdouct-in-list.dto';
 import { TransformInterceptor } from 'src/interceptors/response.interceptor';
 import { ResponseMessage } from 'src/decorators/response_message.decorator';
 import { AuthGuard } from 'src/guards';
@@ -39,7 +38,6 @@ export class ProductController {
   constructor(
     private readonly productService: ProductService,
     private readonly productQueueService: ProductQueueService,
-    private readonly gs1Service: Gs1Service,
   ) {}
 
   /** ################### PRODUCTS ###################*/
@@ -90,7 +88,7 @@ export class ProductController {
    * @param {SearchProductsDto} searchProductsDto - The DTO containing search criteria for products.
    * @returns {Promise<Product[]>} A promise that resolves to an array of products matching the search criteria.
    */
-  @Get(':companyId')
+  @Get('company/:companyId')
   searchProducts(
     @Param('companyId') companyId: string,
     @Query() searchProductsDto: SearchProductsDto,
@@ -202,7 +200,29 @@ export class ProductController {
     }
   }
 
-  @Get('/metadata/:productId/')
+  @Get('/:productId')
+  @UseGuards(AuthGuard)
+  async getProductById(@Param('productId') productId: UUID): Promise<Product> {
+    const product = await this.productService.getProductById(productId);
+    return product;
+  }
+
+  @Patch('/:productId')
+  @UseGuards(AuthGuard)
+  async editProductById(
+    @Param('productId') productId: UUID,
+    @Body() changes: Partial<Product>,
+    @Request() req: RequestUserDto,
+  ): Promise<Product> {
+    const product = await this.productService.editProductById(
+      productId,
+      req.user.id as UUID,
+      changes,
+    );
+    return product;
+  }
+
+  @Get('/metadata/:productId')
   @UseGuards(AuthGuard)
   @ApiResponse({ type: ProductMetadataDto })
   async getProductMetadata(
