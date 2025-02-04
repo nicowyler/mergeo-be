@@ -331,7 +331,9 @@ export class ProductService {
           product.id,
           userId,
           ActivityEnum.CREATED,
-          'Producto cargado manualmente',
+          fileName
+            ? JSON.stringify({ message: 'Producto cargado desde archivo' })
+            : JSON.stringify({ message: 'Producto cargado manualmente' }),
           fileName ? fileName : null,
         );
 
@@ -809,6 +811,7 @@ export class ProductService {
       .leftJoinAndSelect('product.userActivity', 'activityLog')
       .leftJoinAndSelect('activityLog.user', 'user') // Include user details
       .where('product.id = :productId', { productId })
+      .addOrderBy('activityLog.timestamp', 'DESC')
       .getOne();
 
     if (!product) {
@@ -833,6 +836,7 @@ export class ProductService {
         timestamp: activity.timestamp,
         user: activity.user ? activity.user.email : 'Unknown',
         details: JSON.parse(activity.details),
+        fileName: activity.fileName,
       })),
     };
   }
@@ -868,7 +872,7 @@ export class ProductService {
       product,
       user,
       fileName: fileName,
-      details: JSON.stringify(details),
+      details: details,
     });
 
     // Save activity log

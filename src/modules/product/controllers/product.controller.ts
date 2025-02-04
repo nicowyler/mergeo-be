@@ -29,6 +29,8 @@ import { RequestUserDto } from 'src/modules/auth/dto/auth.dto';
 import { ProductMetadataDto } from 'src/modules/product/dto/product-metadata.dto';
 import { ApiResponse } from '@nestjs/swagger';
 import { ProviderSearchPrdoucDto } from 'src/modules/product/dto/provider-search-products.dto';
+import { GenericFilter } from 'src/common/pagination/generic.filter';
+import { PaginatedProductsService } from '../services/paginated.products.service';
 
 @Controller('/product')
 @UseInterceptors(TransformInterceptor)
@@ -38,6 +40,7 @@ export class ProductController {
   constructor(
     private readonly productService: ProductService,
     private readonly productQueueService: ProductQueueService,
+    private readonly paginatedProductsService: PaginatedProductsService,
   ) {}
 
   /** ################### PRODUCTS ###################*/
@@ -51,13 +54,13 @@ export class ProductController {
    */
   @Get('/search/')
   async searchProviderProducts(
-    @Query() productSearch: ProviderSearchPrdoucDto,
+    @Query() filter: GenericFilter & ProviderSearchPrdoucDto,
   ) {
-    this.logger.log('searching for product', productSearch);
-    const products = await this.productService.searchProviderProducts(
-      productSearch,
+    this.logger.log('searching for product', filter.name);
+    const products = await this.paginatedProductsService.findAllPaginated(
+      filter,
     );
-    return { products, count: products.length };
+    return products;
   }
 
   /**

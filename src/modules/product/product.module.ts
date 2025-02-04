@@ -27,6 +27,7 @@ import { DiscountsList } from 'src/modules/product/entities/dicount-list.entity'
 import { ActivityLog } from 'src/modules/product/entities/prouct-activity-log.entity';
 import { JwtService } from '@nestjs/jwt';
 import { AuthGuard } from 'src/guards';
+import { PaginatedProductsService } from 'src/modules/product/services/paginated.products.service';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { AuthGuard } from 'src/guards';
   ],
   providers: [
     ProductService,
+    PaginatedProductsService,
     DiscountsListService,
     FavoritesService,
     BlackListService,
