@@ -74,8 +74,10 @@ export class ProductService {
    * @returns {Promise<ProviderProductResponseDto[]>} A promise that resolves to an array of products matching the search criteria,
    * each product includes a flag indicating if it is related to the specified company.
    */
-  async searchProviderProducts(searchProductsDto: ProviderSearchPrdoucDto) {
-    const { name, brand, ean, companyId, includeInventory } = searchProductsDto;
+  async searchProviderProducts(
+    searchProductsDto: Omit<ProviderSearchPrdoucDto, 'includeInventory'>,
+  ) {
+    const { name, brand, ean, companyId } = searchProductsDto;
 
     if (ean) {
       return this.searchProductByEan(ean, companyId);
@@ -90,21 +92,18 @@ export class ProductService {
       .addOrderBy('product.id');
 
     // If includeInventory is true, search products belonging to the company
-    if (includeInventory) {
-      queryBuilder.where('company.id = :companyId', { companyId });
-    } else {
-      // Exclude products already in the company inventory
-      queryBuilder.where((qb) => {
-        const subQuery = qb
-          .subQuery()
-          .select('product.gtin')
-          .from('product', 'product')
-          .innerJoin('product.company', 'company')
-          .where('company.id = :companyId')
-          .getQuery();
-        return `product.gtin NOT IN ${subQuery}`;
-      });
-    }
+
+    // Exclude products already in the company inventory
+    queryBuilder.where((qb) => {
+      const subQuery = qb
+        .subQuery()
+        .select('product.gtin')
+        .from('product', 'product')
+        .innerJoin('product.company', 'company')
+        .where('company.id = :companyId')
+        .getQuery();
+      return `product.gtin NOT IN ${subQuery}`;
+    });
 
     // Apply additional search filters
     if (name) {
@@ -126,15 +125,9 @@ export class ProductService {
 
     // Map results to DTO
     const productsWithRelation = results.map((product) => {
-      if (includeInventory) {
-        return plainToClass(ProductResponseDto, product, {
-          excludeExtraneousValues: true,
-        });
-      } else {
-        return plainToClass(ProviderProductResponseDto, product, {
-          excludeExtraneousValues: true,
-        });
-      }
+      return plainToClass(ProviderProductResponseDto, product, {
+        excludeExtraneousValues: true,
+      });
     });
 
     return productsWithRelation;

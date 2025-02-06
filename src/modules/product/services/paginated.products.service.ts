@@ -4,7 +4,7 @@ import { GenericFilter } from 'src/common/pagination/generic.filter';
 import { PageService } from 'src/common/pagination/page.service';
 import { ProviderSearchPrdoucDto } from 'src/modules/product/dto/provider-search-products.dto';
 import { Product } from 'src/modules/product/entities/product.entity';
-import { Repository, FindOptionsWhere, ILike } from 'typeorm';
+import { Repository, FindOptionsWhere, Raw } from 'typeorm';
 
 @Injectable()
 export class PaginatedProductsService extends PageService {
@@ -69,11 +69,17 @@ export class PaginatedProductsService extends PageService {
       };
 
       if (params.name) {
-        where.name = ILike(`%${params.name}%`);
+        where.name = Raw(
+          (alias) => `UPPER(UNACCENT(${alias})) LIKE UPPER(UNACCENT(:value))`,
+          { value: `%${params.name}%` },
+        );
       }
 
       if (params.brand) {
-        where.brand = ILike(`%${params.brand}%`);
+        where.brand = Raw(
+          (alias) => `UPPER(UNACCENT(${alias})) LIKE UPPER(UNACCENT(:value))`,
+          { value: `%${params.brand}%` },
+        );
       }
 
       return where;

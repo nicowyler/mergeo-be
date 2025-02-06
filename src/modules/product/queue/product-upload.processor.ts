@@ -77,6 +77,7 @@ export class ProductProcessor {
         fileName,
       );
     } catch (error) {
+      this.onProductChange(gtin, companyId, upload_percent); // Emit the event
       console.error(`Error processing GTIN ${gtin}:`, error);
     }
   }

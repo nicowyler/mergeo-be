@@ -28,7 +28,10 @@ import { AuthGuard } from 'src/guards';
 import { RequestUserDto } from 'src/modules/auth/dto/auth.dto';
 import { ProductMetadataDto } from 'src/modules/product/dto/product-metadata.dto';
 import { ApiResponse } from '@nestjs/swagger';
-import { ProviderSearchPrdoucDto } from 'src/modules/product/dto/provider-search-products.dto';
+import {
+  NewSearchPrdoucDto,
+  ProviderSearchPrdoucDto,
+} from 'src/modules/product/dto/provider-search-products.dto';
 import { GenericFilter } from 'src/common/pagination/generic.filter';
 import { PaginatedProductsService } from '../services/paginated.products.service';
 
@@ -60,6 +63,12 @@ export class ProductController {
     const products = await this.paginatedProductsService.findAllPaginated(
       filter,
     );
+    return products;
+  }
+
+  @Get('/search/newProducts')
+  async searchProviderNewProducts(@Query() dto: NewSearchPrdoucDto) {
+    const products = await this.productService.searchProviderProducts(dto);
     return products;
   }
 
