@@ -69,13 +69,13 @@ export class ProductProcessor {
           price: price,
         } as Gs1ProductDto;
       }
-      this.onProductChange(gtin, companyId, upload_percent); // Emit the event
       await this.productService.addProduct(
         productData,
         userId,
         companyId,
         fileName,
       );
+      this.onProductChange(gtin, companyId, upload_percent); // Emit the event
     } catch (error) {
       this.onProductChange(gtin, companyId, upload_percent); // Emit the event
       console.error(`Error processing GTIN ${gtin}:`, error);
