@@ -38,7 +38,7 @@ export class FavoriteListController {
    * @param productId - The UUID of the product.
    * @returns A promise that resolves when the product has been added to the favorite list.
    */
-  @Post('/:companyId/:productId')
+  @Post('/:companyId/product/:productId')
   addProductToFavoriteList(
     @Param('companyId') companyId: UUID,
     @Param('productId') productId: UUID,
@@ -53,7 +53,7 @@ export class FavoriteListController {
    * @param productId - The UUID of the product to be removed from the favorite list.
    * @returns A promise that resolves when the product is removed from the favorite list.
    */
-  @Post('/:companyId/:productId/remove')
+  @Post('/:companyId/product/:productId/remove')
   removeProductFromFavoriteList(
     @Param('companyId') companyId: UUID,
     @Param('productId') productId: UUID,

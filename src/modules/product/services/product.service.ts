@@ -28,7 +28,6 @@ import { ActivityEnum } from 'src/common/enum/activityLog.enum';
 import { ErrorMessages } from 'src/common/enum';
 import { plainToClass } from 'class-transformer';
 import {
-  ProductResponseDto,
   ProviderProductResponseDto,
   ProviderSearchPrdoucDto,
 } from 'src/modules/product/dto/provider-search-products.dto';
@@ -473,7 +472,7 @@ export class ProductService {
         .where('company.id != :yourCompanyId', { yourCompanyId: companyId })
         .andWhere(
           `ST_DWithin(
-            (SELECT address.location
+            (SELECT ST_Union(address.location)
              FROM pick_up_point AS pickUpPoint
              INNER JOIN address ON pickUpPoint.addressId = address.id
              WHERE pickUpPoint.company = company.id),
@@ -515,7 +514,14 @@ export class ProductService {
     }
 
     // Combine results from both queries
-    const combinedProducts = [...dropZoneProducts, ...pickUpProducts];
+    const combinedProducts = Array.from(
+      new Map(
+        [...dropZoneProducts, ...pickUpProducts].map((product) => [
+          product.id,
+          product,
+        ]),
+      ).values(),
+    );
 
     if (combinedProducts.length === 0) {
       return { count: 0, products: [], message: 'No products found' };

@@ -76,7 +76,7 @@ export class PreOrderController {
     return this.preOrderQueue.getAllActivePreOrderJobs();
   }
 
-  @Get('/:companyId')
+  @Get('/:companyId/client')
   async get(
     @Param('companyId') companyId: UUID,
     @Query('status') status: PRE_ORDER_STATUS,
