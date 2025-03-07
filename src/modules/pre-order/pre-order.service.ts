@@ -467,7 +467,12 @@ export class PreOrderService {
     try {
       const preOrders = await this.preOrderRepository.find({
         where: { client: { id: companyId }, status },
-        relations: ['preOrderProducts', 'preOrderProducts.product', 'provider'],
+        relations: [
+          'preOrderProducts',
+          'preOrderProducts.product',
+          'provider',
+          'buyOrder',
+        ],
       });
       const sortedPreOrders = preOrders.sort((a, b) => {
         if (a.updated < b.updated) {

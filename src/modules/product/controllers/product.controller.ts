@@ -15,7 +15,10 @@ import {
   Patch,
 } from '@nestjs/common';
 import { ProductService } from '../services/product.service';
-import { SearchProductsDto } from 'src/modules/product/dto/search-products.dto';
+import {
+  PaginatedSearchProductsDto,
+  SearchProductsDto,
+} from 'src/modules/product/dto/search-products.dto';
 import { UUID } from 'crypto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import * as xlsx from 'xlsx';
@@ -103,9 +106,12 @@ export class ProductController {
   @Get('company/:companyId')
   searchProducts(
     @Param('companyId') companyId: string,
-    @Query() searchProductsDto: SearchProductsDto,
-  ): Promise<{ count: number; products: Product[] }> {
-    return this.productService.searchProducts(companyId, searchProductsDto);
+    @Query() searchProductsDto: PaginatedSearchProductsDto,
+  ) {
+    return this.productService.paginatedSearchProducts(
+      companyId,
+      searchProductsDto,
+    );
   }
 
   /**

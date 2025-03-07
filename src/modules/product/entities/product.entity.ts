@@ -3,6 +3,7 @@ import { DateAudit } from 'src/common/entities/base.entity';
 import { BuyOrderProduct } from 'src/modules/buy-order/entities/buy-order-product.entity';
 import { Company } from 'src/modules/company/entities/company.entity';
 import { PreOrderProduct } from 'src/modules/pre-order/entities/pre-order-product.entity';
+import { BlackList } from 'src/modules/product/entities/black-list.entity';
 import { DiscountsList } from 'src/modules/product/entities/dicount-list.entity';
 import { ActivityLog } from 'src/modules/product/entities/prouct-activity-log.entity';
 import {
@@ -94,4 +95,7 @@ export class Product extends DateAudit {
 
   @OneToMany(() => ActivityLog, (activityLog) => activityLog.product)
   userActivity: ActivityLog[];
+
+  @ManyToMany(() => BlackList, (blackList) => blackList.products)
+  blackLists: BlackList[];
 }

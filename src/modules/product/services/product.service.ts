@@ -9,7 +9,10 @@ import { Product } from 'src/modules/product/entities/product.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Branch } from 'src/modules/company/entities/branch.entity';
-import { SearchProductsDto } from 'src/modules/product/dto/search-products.dto';
+import {
+  PaginatedSearchProductsDto,
+  SearchProductsDto,
+} from 'src/modules/product/dto/search-products.dto';
 import { getConvertedPricePerUnit } from 'src/modules/product/utils';
 import { UUID } from 'crypto';
 import { Company } from 'src/modules/company/entities/company.entity';
@@ -33,6 +36,7 @@ import {
 } from 'src/modules/product/dto/provider-search-products.dto';
 import { Gs1Service } from 'src/modules/gs1/gs1.service';
 import { GtinProductDto } from 'src/modules/product/dto/gtinProduct.dto';
+import { GenericFilter } from 'src/common/pagination/generic.filter';
 
 @Injectable()
 export class ProductService {
@@ -343,6 +347,37 @@ export class ProductService {
     }
   }
 
+  async paginatedSearchProducts(
+    companyId: string,
+    searchProductsDto: PaginatedSearchProductsDto,
+  ) {
+    const page = Math.max(1, searchProductsDto.page || 1);
+    const pageSize = Math.max(1, searchProductsDto.pageSize || 10);
+    const skip = (page - 1) * pageSize;
+
+    const { count, products, message } = await this.searchProducts(
+      companyId,
+      searchProductsDto,
+      false,
+      true, // Enable pagination
+      { skip, take: pageSize },
+    );
+
+    const totalPages = Math.ceil(count / pageSize);
+
+    return {
+      products,
+      total: count,
+      count: products.length,
+      page,
+      pageSize,
+      totalPages,
+      hasNextPage: page < totalPages,
+      hasPreviousPage: page > 1,
+      message,
+    };
+  }
+
   /**
    * CLIENT SEARCH
    *
@@ -381,6 +416,8 @@ export class ProductService {
     companyId: string, // this is the buyer's company id
     searchProductsDto: SearchProductsDto,
     withCompany = false,
+    withPagination = true, // New parameter to toggle pagination
+    pagination?: { skip: number; take: number }, // Optional pagination for custom cases
   ): Promise<{ count: number; products: Product[]; message?: string }> {
     const {
       branchId,
@@ -403,170 +440,314 @@ export class ProductService {
         (1000 * 60 * 60 * 24),
     );
 
-    const query = this.productRepository.createQueryBuilder('product');
-
-    // Use either join or leftJoin based on the parameter
-    if (withCompany) {
-      query.leftJoinAndSelect('product.company', 'company'); // Inner join
-    } else {
-      query
-        .leftJoin('product.company', 'company') // Left join
-        .select(['product', 'company.id']);
-    }
-    // Create the base query for products and companies
-    query
-      .distinctOn(['product.id', 'company.id'])
+    const query = this.productRepository
+      .createQueryBuilder('product')
+      .leftJoin('product.company', 'company')
       .leftJoin('company.dropZones', 'dropZone')
       .leftJoin('dropZone.schedules', 'schedule')
-      .leftJoin('dropZone.company', 'dropZoneCompany')
       .leftJoin('company.pickUpPoints', 'pickUpPoint')
       .leftJoin('pickUpPoint.schedules', 'pickUpSchedule')
       .leftJoin(Branch, 'branch', 'branch.id = :branchId', { branchId })
       .leftJoin('branch.address', 'branchAddress')
-      .where('company.id != :yourCompanyId', { yourCompanyId: companyId });
-
-    // Always add delivery via drop zone logic
-    query
-      .andWhere('ST_Contains(dropZone.zone, branchAddress.location)')
-      .andWhere(
-        `EXISTS (
-          SELECT 1
-          FROM generate_series(0, :diffInDays) AS g
-          WHERE date_part('dow', current_date + g * INTERVAL '1 day') = (
-            CASE
-              WHEN LOWER(unaccent(schedule.day)) = 'domingo' THEN 0
-              WHEN LOWER(unaccent(schedule.day)) = 'lunes' THEN 1
-              WHEN LOWER(unaccent(schedule.day)) = 'martes' THEN 2
-              WHEN LOWER(unaccent(schedule.day)) = 'miércoles' THEN 3
-              WHEN LOWER(unaccent(schedule.day)) = 'jueves' THEN 4
-              WHEN LOWER(unaccent(schedule.day)) = 'viernes' THEN 5
-              WHEN LOWER(unaccent(schedule.day)) = 'sábado' THEN 6
-            END
-          )
-        )`,
-        { diffInDays },
+      .leftJoin('company.blackLists', 'blackList') // This should match the relation in the Product entity
+      .leftJoin(
+        'blackList.products',
+        'blackListedProduct',
+        'blackListedProduct.id = product.id',
       )
-      // Ensure the delivery hours are within the specified range
-      .andWhere('schedule.startHour < :endHour', { endHour })
-      .andWhere('schedule.endHour > :startHour', { startHour });
-
-    // Retrieve products via drop zone logic
-    const dropZoneProducts = await query.getMany();
-
-    // If pick-up is enabled, search in pickUpPoints as well
-    let pickUpProducts = [];
-    if (isPickUp) {
-      const pickUpQuery = this.productRepository.createQueryBuilder('product');
-      // Use either join or leftJoin based on the parameter
-      if (withCompany) {
-        pickUpQuery.innerJoin('product.company', 'company'); // Inner join
-      } else {
-        pickUpQuery
-          .leftJoin('product.company', 'company') // Left join
-          .select(['product', 'company.id']);
-      }
-      pickUpQuery
-        .distinctOn(['product.id', 'company.id'])
-        .leftJoin('company.pickUpPoints', 'pickUpPoint')
-        .leftJoin('pickUpPoint.schedules', 'pickUpSchedule')
-        .where('company.id != :yourCompanyId', { yourCompanyId: companyId })
-        .andWhere(
-          `ST_DWithin(
-            (SELECT ST_Union(address.location)
-             FROM pick_up_point AS pickUpPoint
-             INNER JOIN address ON pickUpPoint.addressId = address.id
-             WHERE pickUpPoint.company = company.id),
-            ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326),
-            :radius * 1000
-          )`,
-          {
-            longitude: pickUpLng,
-            latitude: pickUpLat,
-            radius: pickUpRadius,
-          },
+      .where('company.id != :yourCompanyId', { yourCompanyId: companyId })
+      .andWhere('blackListedProduct.id IS NULL') // Exclude blacklisted products
+      .andWhere('LOWER(product.name) LIKE LOWER(:name)', {
+        name: name ? `%${name}%` : '%',
+      })
+      .andWhere('LOWER(product.brand) LIKE LOWER(:brand)', {
+        brand: brand ? `%${brand}%` : '%',
+      })
+      .andWhere(
+        `
+    (
+      ST_Contains(dropZone.zone, branchAddress.location)
+      AND EXISTS (
+        SELECT 1 FROM generate_series(0, :diffInDays) AS g
+        WHERE date_part('dow', current_date + g * INTERVAL '1 day') = (
+          CASE
+            WHEN LOWER(unaccent(schedule.day)) = 'domingo' THEN 0
+            WHEN LOWER(unaccent(schedule.day)) = 'lunes' THEN 1
+            WHEN LOWER(unaccent(schedule.day)) = 'martes' THEN 2
+            WHEN LOWER(unaccent(schedule.day)) = 'miércoles' THEN 3
+            WHEN LOWER(unaccent(schedule.day)) = 'jueves' THEN 4
+            WHEN LOWER(unaccent(schedule.day)) = 'viernes' THEN 5
+            WHEN LOWER(unaccent(schedule.day)) = 'sábado' THEN 6
+          END
         )
-        .andWhere(
-          `EXISTS (
-            SELECT 1
-            FROM generate_series(0, :diffInDays) AS g
-            WHERE date_part('dow', current_date + g * INTERVAL '1 day') = (
-              CASE
-                WHEN LOWER(unaccent(pickUpSchedule.day)) = 'domingo' THEN 0
-                WHEN LOWER(unaccent(pickUpSchedule.day)) = 'lunes' THEN 1
-                WHEN LOWER(unaccent(pickUpSchedule.day)) = 'martes' THEN 2
-                WHEN LOWER(unaccent(pickUpSchedule.day)) = 'miércoles' THEN 3
-                WHEN LOWER(unaccent(pickUpSchedule.day)) = 'jueves' THEN 4
-                WHEN LOWER(unaccent(pickUpSchedule.day)) = 'viernes' THEN 5
-                WHEN LOWER(unaccent(pickUpSchedule.day)) = 'sábado' THEN 6
-              END
-            )
-          )`,
-          { diffInDays },
+      )
+      AND schedule.startHour < :endHour
+      AND schedule.endHour > :startHour
+    )
+    OR
+    (
+      :isPickUp = true
+      AND ST_DWithin(
+        (SELECT ST_Union(address.location)
+         FROM pick_up_point AS pickUpPoint
+         INNER JOIN address ON pickUpPoint.addressId = address.id
+         WHERE pickUpPoint.company = company.id),
+        ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326),
+        :radius * 1000
+      )
+      AND EXISTS (
+        SELECT 1 FROM generate_series(0, :diffInDays) AS g
+        WHERE date_part('dow', current_date + g * INTERVAL '1 day') = (
+          CASE
+            WHEN LOWER(unaccent(pickUpSchedule.day)) = 'domingo' THEN 0
+            WHEN LOWER(unaccent(pickUpSchedule.day)) = 'lunes' THEN 1
+            WHEN LOWER(unaccent(pickUpSchedule.day)) = 'martes' THEN 2
+            WHEN LOWER(unaccent(pickUpSchedule.day)) = 'miércoles' THEN 3
+            WHEN LOWER(unaccent(pickUpSchedule.day)) = 'jueves' THEN 4
+            WHEN LOWER(unaccent(pickUpSchedule.day)) = 'viernes' THEN 5
+            WHEN LOWER(unaccent(pickUpSchedule.day)) = 'sábado' THEN 6
+          END
         )
-        // Ensure the pick-up hours are within the specified range
-        .andWhere('pickUpSchedule.startHour < :endHour', { endHour })
-        .andWhere('pickUpSchedule.endHour > :startHour', { startHour });
-
-      // Retrieve products via pick-up logic
-      pickUpProducts = await pickUpQuery.getMany();
-      // we add isPickup flag to each product found in the pickup area
-      pickUpProducts.map((product) => (product.isPickup = true));
-    }
-
-    // Combine results from both queries
-    const combinedProducts = Array.from(
-      new Map(
-        [...dropZoneProducts, ...pickUpProducts].map((product) => [
-          product.id,
-          product,
-        ]),
-      ).values(),
-    );
-
-    if (combinedProducts.length === 0) {
-      return { count: 0, products: [], message: 'No products found' };
-    }
-
-    // Filter products based on blacklist
-    const blackListedProducts = await this.blackListRepository
-      .createQueryBuilder('blackList')
-      .leftJoinAndSelect('blackList.products', 'product')
-      .getMany();
-
-    const blackListedProductIds = blackListedProducts.flatMap((bl) =>
-      bl.products.map((p) => p.id),
-    );
-
-    let filteredProducts = combinedProducts.filter(
-      (product) => !blackListedProductIds.includes(product.id),
-    );
-
-    if (name) {
-      filteredProducts = filteredProducts.filter((product) =>
-        product.name.toLowerCase().includes(name.toLowerCase()),
+      )
+      AND pickUpSchedule.startHour < :endHour
+      AND pickUpSchedule.endHour > :startHour
+    )
+  `,
+        {
+          diffInDays,
+          endHour,
+          startHour,
+          isPickUp,
+          longitude: pickUpLng,
+          latitude: pickUpLat,
+          radius: pickUpRadius,
+        },
       );
+
+    // GROUP BY the necessary fields
+    query
+      .groupBy('product.id') // Add this line
+      .addGroupBy('company.id'); // Ensure this is grouped if you're selecting columns from the company
+
+    // Apply pagination if needed
+    if (withPagination && pagination) {
+      query.skip(pagination.skip).take(pagination.take);
     }
 
-    if (brand) {
-      filteredProducts = filteredProducts.filter((product) =>
-        product.brand.toLowerCase().includes(brand.toLowerCase()),
-      );
-    }
+    // Retrieve products
+    let products = await query.getMany();
 
-    // Apply discounts for products in lists that the user's company is part of
-    filteredProducts = await this.applyDiscounts(filteredProducts, companyId);
+    // Apply discounts
+    products = await this.applyDiscounts(products, companyId);
 
-    // Sort products by price base per unit
-    const sortedProducts = filteredProducts.sort(
-      (a, b) => a.pricePerBaseUnit - b.pricePerBaseUnit,
-    );
+    // Sort products by price
+    products.sort((a, b) => a.pricePerBaseUnit - b.pricePerBaseUnit);
 
-    // Count the number of sorted products
-    const productCount = sortedProducts.length;
+    // If pagination is enabled, calculate the total count
+    const count = withPagination ? await query.getCount() : products.length;
 
-    // Optionally, you can return the count along with the sorted products
-    return { count: productCount, products: sortedProducts };
+    return { count, products };
   }
+
+  // async searchProducts(
+  //   companyId: string, // this is the buyer's company id
+  //   searchProductsDto: SearchProductsDto,
+  //   withCompany = false,
+  //   pagination?: { skip: number; take: number },
+  // ): Promise<{ count: number; products: Product[]; message?: string }> {
+  //   const {
+  //     branchId,
+  //     expectedDeliveryStartDay,
+  //     expectedDeliveryEndDay,
+  //     startHour,
+  //     endHour,
+  //     name,
+  //     brand,
+  //     isPickUp,
+  //     pickUpLat,
+  //     pickUpLng,
+  //     pickUpRadius,
+  //   } = searchProductsDto;
+
+  //   // Calculate the number of days between start and end
+  //   const diffInDays = Math.floor(
+  //     (new Date(expectedDeliveryEndDay).getTime() -
+  //       new Date(expectedDeliveryStartDay).getTime()) /
+  //       (1000 * 60 * 60 * 24),
+  //   );
+
+  //   const query = this.productRepository.createQueryBuilder('product');
+
+  //   // Use either join or leftJoin based on the parameter
+  //   if (withCompany) {
+  //     query.leftJoinAndSelect('product.company', 'company'); // Inner join
+  //   } else {
+  //     query
+  //       .leftJoin('product.company', 'company') // Left join
+  //       .select(['product', 'company.id']);
+  //   }
+  //   // Create the base query for products and companies
+  //   query
+  //     .distinctOn(['product.id', 'company.id'])
+  //     .leftJoin('company.dropZones', 'dropZone')
+  //     .leftJoin('dropZone.schedules', 'schedule')
+  //     .leftJoin('dropZone.company', 'dropZoneCompany')
+  //     .leftJoin('company.pickUpPoints', 'pickUpPoint')
+  //     .leftJoin('pickUpPoint.schedules', 'pickUpSchedule')
+  //     .leftJoin(Branch, 'branch', 'branch.id = :branchId', { branchId })
+  //     .leftJoin('branch.address', 'branchAddress')
+  //     .where('company.id != :yourCompanyId', { yourCompanyId: companyId });
+
+  //   // Always add delivery via drop zone logic
+  //   query
+  //     .andWhere('ST_Contains(dropZone.zone, branchAddress.location)')
+  //     .andWhere(
+  //       `EXISTS (
+  //         SELECT 1
+  //         FROM generate_series(0, :diffInDays) AS g
+  //         WHERE date_part('dow', current_date + g * INTERVAL '1 day') = (
+  //           CASE
+  //             WHEN LOWER(unaccent(schedule.day)) = 'domingo' THEN 0
+  //             WHEN LOWER(unaccent(schedule.day)) = 'lunes' THEN 1
+  //             WHEN LOWER(unaccent(schedule.day)) = 'martes' THEN 2
+  //             WHEN LOWER(unaccent(schedule.day)) = 'miércoles' THEN 3
+  //             WHEN LOWER(unaccent(schedule.day)) = 'jueves' THEN 4
+  //             WHEN LOWER(unaccent(schedule.day)) = 'viernes' THEN 5
+  //             WHEN LOWER(unaccent(schedule.day)) = 'sábado' THEN 6
+  //           END
+  //         )
+  //       )`,
+  //       { diffInDays },
+  //     )
+  //     // Ensure the delivery hours are within the specified range
+  //     .andWhere('schedule.startHour < :endHour', { endHour })
+  //     .andWhere('schedule.endHour > :startHour', { startHour });
+
+  //   if (pagination) {
+  //     query.skip(pagination.skip).take(pagination.take);
+  //   }
+
+  //   // Retrieve products via drop zone logic
+  //   const dropZoneProducts = await query.getMany();
+
+  //   // If pick-up is enabled, search in pickUpPoints as well
+  //   let pickUpProducts = [];
+  //   if (isPickUp) {
+  //     const pickUpQuery = this.productRepository.createQueryBuilder('product');
+  //     // Use either join or leftJoin based on the parameter
+  //     if (withCompany) {
+  //       pickUpQuery.innerJoin('product.company', 'company'); // Inner join
+  //     } else {
+  //       pickUpQuery
+  //         .leftJoin('product.company', 'company') // Left join
+  //         .select(['product', 'company.id']);
+  //     }
+  //     pickUpQuery
+  //       .distinctOn(['product.id', 'company.id'])
+  //       .leftJoin('company.pickUpPoints', 'pickUpPoint')
+  //       .leftJoin('pickUpPoint.schedules', 'pickUpSchedule')
+  //       .where('company.id != :yourCompanyId', { yourCompanyId: companyId })
+  //       .andWhere(
+  //         `ST_DWithin(
+  //           (SELECT ST_Union(address.location)
+  //            FROM pick_up_point AS pickUpPoint
+  //            INNER JOIN address ON pickUpPoint.addressId = address.id
+  //            WHERE pickUpPoint.company = company.id),
+  //           ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326),
+  //           :radius * 1000
+  //         )`,
+  //         {
+  //           longitude: pickUpLng,
+  //           latitude: pickUpLat,
+  //           radius: pickUpRadius,
+  //         },
+  //       )
+  //       .andWhere(
+  //         `EXISTS (
+  //           SELECT 1
+  //           FROM generate_series(0, :diffInDays) AS g
+  //           WHERE date_part('dow', current_date + g * INTERVAL '1 day') = (
+  //             CASE
+  //               WHEN LOWER(unaccent(pickUpSchedule.day)) = 'domingo' THEN 0
+  //               WHEN LOWER(unaccent(pickUpSchedule.day)) = 'lunes' THEN 1
+  //               WHEN LOWER(unaccent(pickUpSchedule.day)) = 'martes' THEN 2
+  //               WHEN LOWER(unaccent(pickUpSchedule.day)) = 'miércoles' THEN 3
+  //               WHEN LOWER(unaccent(pickUpSchedule.day)) = 'jueves' THEN 4
+  //               WHEN LOWER(unaccent(pickUpSchedule.day)) = 'viernes' THEN 5
+  //               WHEN LOWER(unaccent(pickUpSchedule.day)) = 'sábado' THEN 6
+  //             END
+  //           )
+  //         )`,
+  //         { diffInDays },
+  //       )
+  //       // Ensure the pick-up hours are within the specified range
+  //       .andWhere('pickUpSchedule.startHour < :endHour', { endHour })
+  //       .andWhere('pickUpSchedule.endHour > :startHour', { startHour });
+
+  //     if (pagination) {
+  //       pickUpQuery.skip(pagination.skip).take(pagination.take);
+  //     }
+
+  //     // Retrieve products via pick-up logic
+  //     pickUpProducts = await pickUpQuery.getMany();
+  //     // we add isPickup flag to each product found in the pickup area
+  //     pickUpProducts.map((product) => (product.isPickup = true));
+  //   }
+
+  //   // Combine results from both queries
+  //   const combinedProducts = Array.from(
+  //     new Map(
+  //       [...dropZoneProducts, ...pickUpProducts].map((product) => [
+  //         product.id,
+  //         product,
+  //       ]),
+  //     ).values(),
+  //   );
+
+  //   if (combinedProducts.length === 0) {
+  //     return { count: 0, products: [], message: 'No products found' };
+  //   }
+
+  //   // Filter products based on blacklist
+  //   const blackListedProducts = await this.blackListRepository
+  //     .createQueryBuilder('blackList')
+  //     .leftJoinAndSelect('blackList.products', 'product')
+  //     .getMany();
+
+  //   const blackListedProductIds = blackListedProducts.flatMap((bl) =>
+  //     bl.products.map((p) => p.id),
+  //   );
+
+  //   let filteredProducts = combinedProducts.filter(
+  //     (product) => !blackListedProductIds.includes(product.id),
+  //   );
+
+  //   if (name) {
+  //     filteredProducts = filteredProducts.filter((product) =>
+  //       product.name.toLowerCase().includes(name.toLowerCase()),
+  //     );
+  //   }
+
+  //   if (brand) {
+  //     filteredProducts = filteredProducts.filter((product) =>
+  //       product.brand.toLowerCase().includes(brand.toLowerCase()),
+  //     );
+  //   }
+
+  //   // Apply discounts for products in lists that the user's company is part of
+  //   filteredProducts = await this.applyDiscounts(filteredProducts, companyId);
+
+  //   // Sort products by price base per unit
+  //   const sortedProducts = filteredProducts.sort(
+  //     (a, b) => a.pricePerBaseUnit - b.pricePerBaseUnit,
+  //   );
+
+  //   // Count the number of sorted products
+  //   const productCount = sortedProducts.length;
+
+  //   // Optionally, you can return the count along with the sorted products
+  //   return { count: productCount, products: sortedProducts };
+  // }
 
   /**
    * Retrieves a list of products with their net contents and the best prices for each net content.
