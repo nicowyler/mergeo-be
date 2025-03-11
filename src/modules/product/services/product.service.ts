@@ -449,14 +449,19 @@ export class ProductService {
       .leftJoin('pickUpPoint.schedules', 'pickUpSchedule')
       .leftJoin(Branch, 'branch', 'branch.id = :branchId', { branchId })
       .leftJoin('branch.address', 'branchAddress')
-      .leftJoin('company.blackLists', 'blackList') // This should match the relation in the Product entity
-      .leftJoin(
-        'blackList.products',
-        'blackListedProduct',
-        'blackListedProduct.id = product.id',
-      )
       .where('company.id != :yourCompanyId', { yourCompanyId: companyId })
-      .andWhere('blackListedProduct.id IS NULL') // Exclude blacklisted products
+      .leftJoin('product.blackLists', 'blackList')
+      .andWhere(
+        `NOT EXISTS (
+          SELECT 1
+          FROM black_list bl
+          INNER JOIN black_list_products_product blp
+          ON bl.id = blp."black_list_id"
+          WHERE bl."company_id" = :companyId
+          AND blp."product_id" = product.id
+        )`,
+        { companyId },
+      )
       .andWhere('LOWER(product.name) LIKE LOWER(:name)', {
         name: name ? `%${name}%` : '%',
       })

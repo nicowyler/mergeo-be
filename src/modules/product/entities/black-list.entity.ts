@@ -17,7 +17,7 @@ export class BlackList {
   @ManyToOne(() => Company, (company) => company.blackLists)
   company: Company;
 
-  @ManyToMany(() => Product)
+  @ManyToMany(() => Product, (product) => product.blackLists)
   @JoinTable()
   products: Product[];
 }
