@@ -98,4 +98,11 @@ export class Product extends DateAudit {
 
   @ManyToMany(() => BlackList, (blackList) => blackList.products)
   blackLists: BlackList[];
+
+  @Column({ type: 'boolean', nullable: true, default: null })
+  isPickUp: boolean;
+
+  isFavorite: boolean;
 }
+
+export type ProductWithFavorite = Product & { isFavorite: boolean };

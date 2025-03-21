@@ -76,6 +76,11 @@ export class SearchProductsDto {
   @IsNumber()
   @Type(() => Number)
   pickUpRadius?: number; // Pick-up radius
+
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => value === 'true')
+  onlyFavorites?: boolean;
 }
 
 export class PaginatedSearchProductsDto extends GenericFilter {
@@ -133,4 +138,9 @@ export class PaginatedSearchProductsDto extends GenericFilter {
   @IsNumber()
   @Type(() => Number)
   pickUpRadius?: number; // Pick-up radius
+
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => value === 'true')
+  onlyFavorites?: boolean;
 }

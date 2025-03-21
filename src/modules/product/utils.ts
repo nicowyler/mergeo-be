@@ -1,9 +1,10 @@
 export function getConvertedPricePerUnit(
-  validUnits: string[], // List of valid units,
+  validUnits: string[], // List of valid units
   productUnit: string, // Product's unit of measurement
-  productPrice: number, // Product's price
-  unitConversionFactor: number, // Conversion factor (or quantity)
-  // baseUnit: string, // Base unit for comparison (e.g., grams)
+  finalPrice: number, // Final price for the product
+  unitConversionFactor: number, // Net content of the product (i.e., the quantity)
+  baseUnit: string, // Base unit for comparison (e.g., kg, l)
+  netConentent: number, // Net content of the product (i.e., the quantity)
 ): number | null {
   const BaseUnits = {
     kg: 'kg',
@@ -13,7 +14,8 @@ export function getConvertedPricePerUnit(
     cc: 'cc',
     pc: 'pc',
   };
-  // Helper to find which group the unit belongs to
+
+  // Helper function to find the unit type from valid units
   function findUnitType(unit: string) {
     for (const [type, units] of Object.entries(validUnits)) {
       if (units.includes(unit)) {
@@ -24,35 +26,25 @@ export function getConvertedPricePerUnit(
   }
 
   const productUnitType = findUnitType(productUnit);
-  // const baseUnitType = findUnitType(baseUnit);
 
   // If either unit type is not found or they are incompatible, return null
   if (productUnitType === null) {
     return null; // Ignore this product if units are incompatible
   }
 
-  // Conversion logic for compatible units
-  let conversionRate = 1;
+  // Convert net content to the base unit (kg or l)
+  let netContentInBaseUnit = unitConversionFactor * netConentent;
 
-  // Handle mass conversion
-  if (productUnit.toLowerCase() === BaseUnits.gr) {
-    conversionRate = 0.001; // 1000 grams in a kilogram
+  if (baseUnit === 'kg' && productUnit.toLowerCase() === BaseUnits.gr) {
+    netContentInBaseUnit = unitConversionFactor / 1000; // Convert grams to kilograms
+  } else if (baseUnit === 'l' && productUnit.toLowerCase() === BaseUnits.ml) {
+    netContentInBaseUnit = unitConversionFactor / 1000; // Convert milliliters to liters
+  } else if (baseUnit === 'l' && productUnit.toLowerCase() === BaseUnits.cc) {
+    netContentInBaseUnit = unitConversionFactor / 1000; // Convert cubic centimeters to liters
   }
 
-  // Handle volume conversion
-  if (productUnit.toLowerCase() === BaseUnits.ml) {
-    conversionRate = 0.001; // 1000 milliliters in a liter
-  } else if (productUnit.toLowerCase() === BaseUnits.cc) {
-    conversionRate = 0.001; // 1000 cubic centimeters in a liter
-  }
-
-  if (productUnit.toLowerCase() === BaseUnits.pc) {
-    conversionRate = 1; // 1 piece in a piece
-  }
-
-  // Calculate the price per base unit
-  const pricePerBaseUnit =
-    (productPrice / unitConversionFactor) * conversionRate;
+  // Calculate the price per base unit (final price divided by the content in base unit)
+  const pricePerBaseUnit = finalPrice / netContentInBaseUnit;
 
   return pricePerBaseUnit;
 }
