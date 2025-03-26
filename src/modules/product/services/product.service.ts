@@ -9,7 +9,7 @@ import {
   Product,
   ProductWithFavorite,
 } from 'src/modules/product/entities/product.entity';
-import { Repository } from 'typeorm';
+import { In, Not, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Branch } from 'src/modules/company/entities/branch.entity';
 import {
@@ -448,7 +448,6 @@ export class ProductService {
 
     const query = this.productRepository
       .createQueryBuilder('product')
-      // .select(['product', 'company.id'])
       .leftJoin('product.company', 'company')
       .leftJoin('company.dropZones', 'dropZone')
       .leftJoin('dropZone.schedules', 'schedule')
@@ -456,6 +455,24 @@ export class ProductService {
       .leftJoin('pickUpPoint.schedules', 'pickUpSchedule')
       .leftJoin(Branch, 'branch', 'branch.id = :branchId', { branchId })
       .leftJoin('branch.address', 'branchAddress')
+      .leftJoin(
+        'company.favoriteLists',
+        'favoriteList',
+        'favoriteList.company = :companyId',
+        { companyId },
+      )
+      .leftJoin('favoriteList.products', 'favoriteProduct')
+      .addSelect(
+        `EXISTS (
+          SELECT 1
+          FROM favorite_list fl
+          INNER JOIN favorite_list_products_product flp
+          ON fl.id = flp."favorite_list_id"
+          WHERE fl."company_id" = :companyId
+          AND flp."product_id" = product.id
+        )`,
+        'isFavorite',
+      )
       .where('company.id != :yourCompanyId', { yourCompanyId: companyId })
       .leftJoin('product.blackLists', 'blackList')
       .andWhere(
@@ -563,12 +580,26 @@ export class ProductService {
         brand: brand ? `%${brand}%` : '%',
       });
 
-    // GROUP BY the necessary fields
-    query.groupBy('product.id').addGroupBy('company.id');
+    if (onlyFavorites) {
+      query.andWhere((qb) => {
+        qb.where(
+          `EXISTS (
+                SELECT 1
+                FROM favorite_list fl
+                INNER JOIN favorite_list_products_product flp
+                ON fl.id = flp."favorite_list_id"
+                WHERE fl."company_id" = :companyId
+                AND flp."product_id" = product.id
+              )`,
+        );
+      });
+    }
 
-    const { entities: allProducts } = onlyFavorites
-      ? await query.getRawAndEntities()
-      : { entities: [] };
+    // Select only company id
+    query.addSelect('company.id', 'providerId');
+
+    // GROUP BY only necessary fields
+    query.groupBy('product.id, company.id');
 
     // Apply pagination if needed
     if (withPagination && pagination) {
@@ -578,43 +609,24 @@ export class ProductService {
     // eslint-disable-next-line prefer-const
     let { raw, entities: products } = await query.getRawAndEntities();
 
-    const favoriteList = await this.favoriteRepository.findOne({
-      where: { company: { id: companyId as UUID } }, // Ensure you use the correct ID field
-      relations: ['products'], // Load related products
-    });
-    const favoriteProductIds = new Set(favoriteList.products.map((f) => f.id));
-
     products.map((p, index) => {
       p.isPickUp = raw[index].product_isPickUp;
-      p.isFavorite = favoriteProductIds.has(p.id);
+      p.isFavorite =
+        raw[index]?.isFavorite === 'true' || raw[index]?.isFavorite === true;
+      p.providerId = raw[index].providerId;
     });
-
-    // looking for favorites within the search
-    // we have to do this because the search is not paginated
-    let favsCount = 0;
-    if (onlyFavorites) {
-      const favoriteProductIds = new Set(
-        favoriteList.products.map((f) => f.id),
-      );
-      favsCount = allProducts.filter((p) =>
-        favoriteProductIds.has(p.id),
-      ).length;
-      products = products.filter((product) => product.isFavorite);
-    }
 
     // Apply discounts
     products = await this.applyDiscounts(products, companyId);
+
+    products = await this.getNetContentsWithPricesBulk(products);
 
     // Sort products by price
     products.sort((a, b) => a.pricePerBaseUnit - b.pricePerBaseUnit);
 
     let count = 0;
     // If pagination is enabled, calculate the total count
-    if (onlyFavorites) {
-      count = favsCount;
-    } else {
-      count = withPagination ? await query.getCount() : products.length;
-    }
+    count = withPagination ? await query.getCount() : products.length;
 
     return { count, products };
   }
@@ -639,8 +651,16 @@ export class ProductService {
       .createQueryBuilder('product')
       .where('product.name = :name', { name: product.name })
       .andWhere('product.brand = :brand', { brand: product.brand })
+      .andWhere(
+        '(product.net_content != :netContent OR product.measurementUnit != :measurementUnit)',
+        {
+          netContent: product.net_content,
+          measurementUnit: product.measurementUnit,
+        },
+      )
       .groupBy('product.id')
       .addGroupBy('product.net_content')
+      .addGroupBy('product.measurementUnit')
       .orderBy('product.net_content')
       .getMany();
 
@@ -657,6 +677,50 @@ export class ProductService {
     }, []);
 
     return bestPriceProducts;
+  }
+
+  /**
+   * Retrieves a list of products with their net contents and the best prices for each net content.
+   *
+   * @param {UUID} productId - The unique identifier of the product.
+   * @returns {Promise<Product[]>} A promise that resolves to an array of products with the best prices for each net content.
+   * @throws {Error} If the product is not found.
+   */
+
+  async getNetContentsWithPricesBulk(
+    products: Product[],
+  ): Promise<(Product & { morePresentations: boolean })[]> {
+    if (products.length === 0) return [];
+    // Add morePresentations flag by checking if there are related products
+    const productsWithFlag = await Promise.all(
+      products.map(async (product) => {
+        const relatedCount = await this.productRepository.count({
+          where: [
+            {
+              name: product.name,
+              brand: product.brand,
+              id: Not(product.id),
+              net_content: Not(product.net_content),
+            },
+            {
+              name: product.name,
+              brand: product.brand,
+              id: Not(product.id),
+              measurementUnit: Not(product.measurementUnit),
+            },
+          ],
+        });
+
+        return {
+          ...product,
+          morePresentations: relatedCount > 0,
+        };
+      }),
+    );
+
+    return productsWithFlag.map((product) =>
+      Object.assign(new Product(), product),
+    );
   }
 
   /**

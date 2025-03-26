@@ -103,6 +103,7 @@ export class Product extends DateAudit {
   isPickUp: boolean;
 
   isFavorite: boolean;
+  providerId: UUID;
 }
 
 export type ProductWithFavorite = Product & { isFavorite: boolean };
