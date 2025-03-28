@@ -163,7 +163,7 @@ export class PickUpPointService {
 
         // Check if an address with the given locationId exists
         let address = await this.addressRepository.findOne({
-          where: { locationId },
+          where: { id: locationId },
         });
 
         if (address) {
