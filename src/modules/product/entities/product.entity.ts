@@ -102,8 +102,12 @@ export class Product extends DateAudit {
   @Column({ type: 'boolean', nullable: true, default: null })
   isPickUp: boolean;
 
+  @Column({ type: 'boolean', nullable: true, default: true })
+  isActive: boolean;
+
   isFavorite: boolean;
   providerId: UUID;
+  morePresentations: boolean;
 }
 
 export type ProductWithFavorite = Product & { isFavorite: boolean };

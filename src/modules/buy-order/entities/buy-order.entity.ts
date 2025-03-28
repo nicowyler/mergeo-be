@@ -4,7 +4,6 @@ import {
   PrimaryGeneratedColumn,
   ManyToOne,
   OneToMany,
-  OneToOne,
   JoinColumn,
 } from 'typeorm';
 import { UUID } from 'crypto';
@@ -41,7 +40,7 @@ export class BuyOrder extends DateAudit {
   )
   buyOrderProducts: BuyOrderProduct[];
 
-  @OneToOne(() => PreOrder)
+  @ManyToOne(() => PreOrder)
   @JoinColumn()
   preOrder: PreOrder;
 }

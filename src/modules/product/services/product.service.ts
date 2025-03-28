@@ -439,7 +439,6 @@ export class ProductService {
       onlyFavorites,
     } = searchProductsDto;
 
-    // Calculate the number of days between start and end
     const diffInDays = Math.floor(
       (new Date(expectedDeliveryEndDay).getTime() -
         new Date(expectedDeliveryStartDay).getTime()) /
@@ -474,6 +473,7 @@ export class ProductService {
         'isFavorite',
       )
       .where('company.id != :yourCompanyId', { yourCompanyId: companyId })
+      .andWhere('product.isActive = true')
       .leftJoin('product.blackLists', 'blackList')
       .andWhere(
         `NOT EXISTS (
@@ -492,6 +492,20 @@ export class ProductService {
       .andWhere('LOWER(product.brand) LIKE LOWER(:brand)', {
         brand: brand ? `%${brand}%` : '%',
       })
+      .addSelect(
+        `EXISTS (
+          SELECT 1
+          FROM product AS relatedProduct
+          WHERE relatedProduct.name = product.name
+          AND relatedProduct.brand = product.brand
+          AND relatedProduct.id != product.id
+          AND (
+            relatedProduct.net_content IS DISTINCT FROM product.net_content
+            OR relatedProduct.measurement_unit IS DISTINCT FROM product.measurement_unit
+          )
+        )`,
+        'hasMorePresentations',
+      )
       .addSelect(
         `(
           CASE
@@ -515,54 +529,54 @@ export class ProductService {
       )
       .andWhere(
         `
-    (
-      ST_Contains(dropZone.zone, branchAddress.location)
-      AND EXISTS (
-        SELECT 1 FROM (SELECT generate_series(0, :diffInDays) AS g) AS series
-        WHERE date_part('dow', current_date + series.g * INTERVAL '1 day') = (
-          CASE
-            WHEN LOWER(unaccent(schedule.day)) = 'domingo' THEN 0
-            WHEN LOWER(unaccent(schedule.day)) = 'lunes' THEN 1
-            WHEN LOWER(unaccent(schedule.day)) = 'martes' THEN 2
-            WHEN LOWER(unaccent(schedule.day)) = 'miércoles' THEN 3
-            WHEN LOWER(unaccent(schedule.day)) = 'jueves' THEN 4
-            WHEN LOWER(unaccent(schedule.day)) = 'viernes' THEN 5
-            WHEN LOWER(unaccent(schedule.day)) = 'sábado' THEN 6
-          END
+        (
+          ST_Contains(dropZone.zone, branchAddress.location)
+          AND EXISTS (
+            SELECT 1 FROM (SELECT generate_series(0, :diffInDays) AS g) AS series
+            WHERE date_part('dow', current_date + series.g * INTERVAL '1 day') = (
+              CASE
+                WHEN LOWER(unaccent(schedule.day)) = 'domingo' THEN 0
+                WHEN LOWER(unaccent(schedule.day)) = 'lunes' THEN 1
+                WHEN LOWER(unaccent(schedule.day)) = 'martes' THEN 2
+                WHEN LOWER(unaccent(schedule.day)) = 'miércoles' THEN 3
+                WHEN LOWER(unaccent(schedule.day)) = 'jueves' THEN 4
+                WHEN LOWER(unaccent(schedule.day)) = 'viernes' THEN 5
+                WHEN LOWER(unaccent(schedule.day)) = 'sábado' THEN 6
+              END
+            )
+          )
+          AND schedule.startHour < :endHour
+          AND schedule.endHour > :startHour
         )
-      )
-      AND schedule.startHour < :endHour
-      AND schedule.endHour > :startHour
-    )
-    OR
-    (
-      :isPickUp = true
-      AND ST_DWithin(
-        (SELECT ST_Union(address.location)
-         FROM pick_up_point AS pickUpPoint
-         INNER JOIN address ON pickUpPoint.addressId = address.id
-         WHERE pickUpPoint.company = company.id),
-        ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326),
-        :radius * 1000
-      )
-      AND EXISTS (
-        SELECT 1 FROM (SELECT generate_series(0, :diffInDays) AS g) AS series
-        WHERE date_part('dow', current_date + series.g * INTERVAL '1 day') = (
-          CASE
-            WHEN LOWER(unaccent(pickUpSchedule.day)) = 'domingo' THEN 0
-            WHEN LOWER(unaccent(pickUpSchedule.day)) = 'lunes' THEN 1
-            WHEN LOWER(unaccent(pickUpSchedule.day)) = 'martes' THEN 2
-            WHEN LOWER(unaccent(pickUpSchedule.day)) = 'miércoles' THEN 3
-            WHEN LOWER(unaccent(pickUpSchedule.day)) = 'jueves' THEN 4
-            WHEN LOWER(unaccent(pickUpSchedule.day)) = 'viernes' THEN 5
-            WHEN LOWER(unaccent(pickUpSchedule.day)) = 'sábado' THEN 6
-          END
+        OR
+        (
+          :isPickUp = true
+          AND ST_DWithin(
+            (SELECT ST_Union(address.location)
+             FROM pick_up_point AS pickUpPoint
+             INNER JOIN address ON pickUpPoint.addressId = address.id
+             WHERE pickUpPoint.company = company.id),
+            ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326),
+            :radius * 1000
+          )
+          AND EXISTS (
+            SELECT 1 FROM (SELECT generate_series(0, :diffInDays) AS g) AS series
+            WHERE date_part('dow', current_date + series.g * INTERVAL '1 day') = (
+              CASE
+                WHEN LOWER(unaccent(pickUpSchedule.day)) = 'domingo' THEN 0
+                WHEN LOWER(unaccent(pickUpSchedule.day)) = 'lunes' THEN 1
+                WHEN LOWER(unaccent(pickUpSchedule.day)) = 'martes' THEN 2
+                WHEN LOWER(unaccent(pickUpSchedule.day)) = 'miércoles' THEN 3
+                WHEN LOWER(unaccent(pickUpSchedule.day)) = 'jueves' THEN 4
+                WHEN LOWER(unaccent(pickUpSchedule.day)) = 'viernes' THEN 5
+                WHEN LOWER(unaccent(pickUpSchedule.day)) = 'sábado' THEN 6
+              END
+            )
+          )
+          AND pickUpSchedule.startHour < :endHour
+          AND pickUpSchedule.endHour > :startHour
         )
-      )
-      AND pickUpSchedule.startHour < :endHour
-      AND pickUpSchedule.endHour > :startHour
-    )
-  `,
+      `,
         {
           diffInDays,
           endHour,
@@ -572,36 +586,26 @@ export class ProductService {
           latitude: pickUpLat,
           radius: pickUpRadius,
         },
-      )
-      .andWhere('LOWER(product.name) LIKE LOWER(:name)', {
-        name: name ? `%${name}%` : '%',
-      })
-      .andWhere('LOWER(product.brand) LIKE LOWER(:brand)', {
-        brand: brand ? `%${brand}%` : '%',
-      });
+      );
 
     if (onlyFavorites) {
       query.andWhere((qb) => {
         qb.where(
           `EXISTS (
-                SELECT 1
-                FROM favorite_list fl
-                INNER JOIN favorite_list_products_product flp
-                ON fl.id = flp."favorite_list_id"
-                WHERE fl."company_id" = :companyId
-                AND flp."product_id" = product.id
-              )`,
+            SELECT 1
+            FROM favorite_list fl
+            INNER JOIN favorite_list_products_product flp
+            ON fl.id = flp."favorite_list_id"
+            WHERE fl."company_id" = :companyId
+            AND flp."product_id" = product.id
+          )`,
         );
       });
     }
 
-    // Select only company id
     query.addSelect('company.id', 'providerId');
-
-    // GROUP BY only necessary fields
     query.groupBy('product.id, company.id');
 
-    // Apply pagination if needed
     if (withPagination && pagination) {
       query.skip(pagination.skip).take(pagination.take);
     }
@@ -614,19 +618,17 @@ export class ProductService {
       p.isFavorite =
         raw[index]?.isFavorite === 'true' || raw[index]?.isFavorite === true;
       p.providerId = raw[index].providerId;
+      p.morePresentations =
+        raw[index]?.hasMorePresentations === 'true' ||
+        raw[index]?.hasMorePresentations === true;
     });
 
-    // Apply discounts
     products = await this.applyDiscounts(products, companyId);
-
-    products = await this.getNetContentsWithPricesBulk(products);
 
     // Sort products by price
     products.sort((a, b) => a.pricePerBaseUnit - b.pricePerBaseUnit);
 
-    let count = 0;
-    // If pagination is enabled, calculate the total count
-    count = withPagination ? await query.getCount() : products.length;
+    const count = withPagination ? await query.getCount() : products.length;
 
     return { count, products };
   }
@@ -639,88 +641,73 @@ export class ProductService {
    * @throws {Error} If the product is not found.
    */
   async getNetContentsWithPrices(productId: UUID): Promise<Product[]> {
-    const product = await this.productRepository.findOne({
+    const initialProduct = await this.productRepository.findOne({
       where: { id: productId },
     });
 
-    if (!product) {
+    if (!initialProduct) {
       throw new Error('Product not found');
     }
 
-    const products = await this.productRepository
+    const rawProducts = await this.productRepository
       .createQueryBuilder('product')
-      .where('product.name = :name', { name: product.name })
-      .andWhere('product.brand = :brand', { brand: product.brand })
+      .innerJoin('product.company', 'company')
+      .where('product.name = :name', { name: initialProduct.name })
+      .andWhere('product.brand = :brand', { brand: initialProduct.brand })
+      .andWhere('product.isActive = true')
       .andWhere(
         '(product.net_content != :netContent OR product.measurementUnit != :measurementUnit)',
         {
-          netContent: product.net_content,
-          measurementUnit: product.measurementUnit,
+          netContent: initialProduct.net_content,
+          measurementUnit: initialProduct.measurementUnit,
         },
       )
       .groupBy('product.id')
+      .addGroupBy('company.id')
       .addGroupBy('product.net_content')
       .addGroupBy('product.measurementUnit')
       .orderBy('product.net_content')
-      .getMany();
+      .getRawMany(); // <-- Fetch raw results with selected fields
+
+    // Convert raw results to Product entities while adding providerId
+    const products = rawProducts.map((raw): Product => {
+      // Create a new object removing 'product_' prefix from keys
+      const cleanedData = Object.keys(raw).reduce((acc, key) => {
+        const newKey = key.startsWith('product_')
+          ? key.replace('product_', '')
+          : key;
+        acc[newKey] = raw[key];
+        return acc;
+      }, {});
+
+      // Create product entity with cleaned data
+      const result: Product = plainToClass(Product, {
+        ...cleanedData,
+        providerId: raw.product_company_id,
+      });
+
+      delete (result as any).company_id;
+      return result;
+    });
 
     // Filter to get the product with the best price for each net_content
-    const bestPriceProducts = products.reduce((acc, curr) => {
+    const bestPriceProducts = products.reduce<Product[]>((acc, curr) => {
       const existingProduct = acc.find(
-        (p) => p.product_net_content === curr.net_content,
+        (p) => p.net_content === curr.net_content,
       );
+
       if (!existingProduct || curr.price < existingProduct.price) {
-        acc = acc.filter((p) => p.net_content !== curr.net_content);
-        acc.push(curr);
+        // Remove previous product with the same net_content (if any)
+        const filteredAcc = acc.filter(
+          (p) => p.net_content !== curr.net_content,
+        );
+        return [...filteredAcc, curr]; // Add the new product
       }
-      return acc;
+
+      return acc; // Keep the existing accumulator if the condition isn't met
     }, []);
 
     return bestPriceProducts;
-  }
-
-  /**
-   * Retrieves a list of products with their net contents and the best prices for each net content.
-   *
-   * @param {UUID} productId - The unique identifier of the product.
-   * @returns {Promise<Product[]>} A promise that resolves to an array of products with the best prices for each net content.
-   * @throws {Error} If the product is not found.
-   */
-
-  async getNetContentsWithPricesBulk(
-    products: Product[],
-  ): Promise<(Product & { morePresentations: boolean })[]> {
-    if (products.length === 0) return [];
-    // Add morePresentations flag by checking if there are related products
-    const productsWithFlag = await Promise.all(
-      products.map(async (product) => {
-        const relatedCount = await this.productRepository.count({
-          where: [
-            {
-              name: product.name,
-              brand: product.brand,
-              id: Not(product.id),
-              net_content: Not(product.net_content),
-            },
-            {
-              name: product.name,
-              brand: product.brand,
-              id: Not(product.id),
-              measurementUnit: Not(product.measurementUnit),
-            },
-          ],
-        });
-
-        return {
-          ...product,
-          morePresentations: relatedCount > 0,
-        };
-      }),
-    );
-
-    return productsWithFlag.map((product) =>
-      Object.assign(new Product(), product),
-    );
   }
 
   /**
@@ -868,11 +855,14 @@ export class ProductService {
 
     const differences: { [key: string]: string | number } = {};
 
-    if (changes.description !== product.description) {
+    if (
+      'description' in changes &&
+      changes.description !== product.description
+    ) {
       differences.description = changes.description;
     }
 
-    if (changes.price !== product.price) {
+    if ('price' in changes && changes.price !== product.price) {
       const changingProduct = { ...product, price: changes.price };
       const newBasePrice = await this.calculatePriceBaseUnit(changingProduct);
       differences.price = +changes.price;
@@ -895,15 +885,19 @@ export class ProductService {
       activityChanges.price = { old: product.price, new: changes.price };
     }
 
-    await this.saveActivityAndMetadata(
-      product.id,
-      userId,
-      ActivityEnum.UPDATED,
-      JSON.stringify(activityChanges),
-    );
+    // we check if activeChanges has any key to avoid unecessary calls
+    if (Object.keys(activityChanges).length > 0) {
+      await this.saveActivityAndMetadata(
+        product.id,
+        userId,
+        ActivityEnum.UPDATED,
+        JSON.stringify(activityChanges),
+      );
+    }
 
     product.description = changes.description || product.description;
     product.price = changes.price || product.price;
+    if ('isActive' in changes) product.isActive = changes.isActive;
 
     product.updated = new Date();
     this.productRepository.save(product);
