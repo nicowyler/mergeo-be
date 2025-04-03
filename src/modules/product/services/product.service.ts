@@ -9,20 +9,22 @@ import {
   Product,
   ProductWithFavorite,
 } from 'src/modules/product/entities/product.entity';
-import { In, Not, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Branch } from 'src/modules/company/entities/branch.entity';
 import {
   PaginatedSearchProductsDto,
   SearchProductsDto,
 } from 'src/modules/product/dto/search-products.dto';
-import { getConvertedPricePerUnit } from 'src/modules/product/utils';
+import {
+  cleanProducts,
+  getConvertedPricePerUnit,
+} from 'src/modules/product/utils';
 import { UUID } from 'crypto';
 import { Company } from 'src/modules/company/entities/company.entity';
 import { PrdouctInlistDto } from 'src/modules/product/dto/prdouct-in-list.dto';
 import { ProductMapper } from 'src/modules/product/queue/productMapper';
 import { Gs1ProductDto } from 'src/modules/product/dto/gs1-product.dto';
-import { BlackList } from 'src/modules/product/entities/black-list.entity';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { Unit } from 'src/modules/product/entities/unit.entity';
@@ -33,10 +35,7 @@ import { ActivityLog } from 'src/modules/product/entities/prouct-activity-log.en
 import { ActivityEnum } from 'src/common/enum/activityLog.enum';
 import { ErrorMessages } from 'src/common/enum';
 import { plainToClass } from 'class-transformer';
-import {
-  ProviderProductResponseDto,
-  ProviderSearchPrdoucDto,
-} from 'src/modules/product/dto/provider-search-products.dto';
+import { ProviderSearchPrdoucDto } from 'src/modules/product/dto/provider-search-products.dto';
 import { Gs1Service } from 'src/modules/gs1/gs1.service';
 import { GtinProductDto } from 'src/modules/product/dto/gtinProduct.dto';
 import { FavoriteList } from 'src/modules/product/entities/favorite-list.entity';
@@ -85,6 +84,7 @@ export class ProductService {
   ) {
     const { name, brand, ean, companyId } = searchProductsDto;
 
+    //if we are searching by ean/gtin, we will return the product
     if (ean) {
       return this.searchProductByEan(ean, companyId);
     }
@@ -92,26 +92,18 @@ export class ProductService {
     const queryBuilder = this.productRepository
       .createQueryBuilder('product')
       .distinctOn(['product.gtin'])
-      .leftJoin('product.company', 'company') // Join to check product-company relationships
+      .leftJoin('product.company', 'company')
+      .select([
+        'product.*',
+        'EXISTS (SELECT 1 FROM product p2 ' +
+          'INNER JOIN company c ON p2.company_id = c.id ' +
+          'WHERE p2.gtin = product.gtin AND c.id = :companyId) as isInInventory',
+      ])
       .orderBy('product.gtin')
       .addOrderBy('CASE WHEN company.id = :companyId THEN 0 ELSE 1 END', 'ASC')
       .addOrderBy('product.id');
 
-    // If includeInventory is true, search products belonging to the company
-
-    // Exclude products already in the company inventory
-    queryBuilder.where((qb) => {
-      const subQuery = qb
-        .subQuery()
-        .select('product.gtin')
-        .from('product', 'product')
-        .innerJoin('product.company', 'company')
-        .where('company.id = :companyId')
-        .getQuery();
-      return `product.gtin NOT IN ${subQuery}`;
-    });
-
-    // Apply additional search filters
+    // Apply search filters
     if (name) {
       queryBuilder.andWhere('LOWER(product.name) LIKE LOWER(:name)', {
         name: `%${name}%`,
@@ -127,16 +119,16 @@ export class ProductService {
     queryBuilder.setParameter('companyId', companyId);
 
     // Execute the query
-    const results = await queryBuilder.getMany();
+    const results = await queryBuilder.getRawAndEntities();
 
     // Map results to DTO
-    const productsWithRelation = results.map((product) => {
-      return plainToClass(ProviderProductResponseDto, product, {
-        excludeExtraneousValues: true,
-      });
+    const cleanedProducts = cleanProducts<Product>({
+      rawProducts: results.raw,
+      keyMappings: { isininventory: 'isInInventory' },
+      keysToRemove: ['isinventory'],
     });
 
-    return productsWithRelation;
+    return cleanedProducts;
   }
 
   /**
@@ -171,7 +163,7 @@ export class ProductService {
     }
 
     if (netContent) {
-      queryBuilder.andWhere('product.net_content = :netContent', {
+      queryBuilder.andWhere('product.net_content = :net_content', {
         netContent: netContent,
       });
     }
@@ -197,14 +189,33 @@ export class ProductService {
    * @param id - The unique identifier (UUID) of the product to find.
    * @returns A promise that resolves to the product entity if found, or null if not found.
    */
-  async getProductLocallyByGTIN(gtin: string) {
-    const product = await this.productRepository.findOne({ where: { gtin } });
+  async getProductLocallyByGTIN(gtin: string, companyId: UUID) {
+    const product = await this.productRepository
+      .createQueryBuilder('product')
+      .leftJoin('product.company', 'company')
+      .select([
+        'product',
+        'EXISTS (SELECT 1 FROM product p2 ' +
+          'INNER JOIN company c ON p2.company_id = c.id ' +
+          'WHERE p2.gtin = :gtin AND c.id = :companyId) as isInInventory',
+        '(SELECT p2.price FROM product p2 ' +
+          'INNER JOIN company c ON p2.company_id = c.id ' +
+          'WHERE p2.gtin = :gtin AND c.id = :companyId) as actualPrice',
+      ])
+      .where('product.gtin = :gtin', { gtin })
+      .setParameter('companyId', companyId)
+      .getRawOne();
+
     if (!product) {
       return null;
     }
     product.created = new Date();
     product.updated = new Date();
-    const newProduct = plainToClass(Product, product);
+    const newProduct = cleanProducts<Product>({
+      rawProducts: [product],
+      keyMappings: { isininventory: 'isInInventory' },
+      keysToRemove: ['isinventory'],
+    })[0];
 
     this.logger.log(
       `Product with gtin ${gtin} and name ${product.name} found in ${this.appName} database`,
@@ -649,65 +660,37 @@ export class ProductService {
       throw new Error('Product not found');
     }
 
-    const rawProducts = await this.productRepository
-      .createQueryBuilder('product')
-      .innerJoin('product.company', 'company')
-      .where('product.name = :name', { name: initialProduct.name })
-      .andWhere('product.brand = :brand', { brand: initialProduct.brand })
-      .andWhere('product.isActive = true')
-      .andWhere(
-        '(product.net_content != :netContent OR product.measurementUnit != :measurementUnit)',
-        {
-          netContent: initialProduct.net_content,
-          measurementUnit: initialProduct.measurementUnit,
-        },
-      )
-      .groupBy('product.id')
-      .addGroupBy('company.id')
-      .addGroupBy('product.net_content')
-      .addGroupBy('product.measurementUnit')
-      .orderBy('product.net_content')
-      .getRawMany(); // <-- Fetch raw results with selected fields
+    try {
+      const rawProducts = await this.productRepository
+        .createQueryBuilder('product')
+        .innerJoin('product.company', 'company')
+        .where('product.name = :name', { name: initialProduct.name })
+        .andWhere('product.brand = :brand', { brand: initialProduct.brand })
+        .andWhere('product.isActive = true')
+        .andWhere(
+          '(product.net_content != :netContent OR product.measurementUnit != :measurementUnit)',
+          {
+            netContent: initialProduct.netContent,
+            measurementUnit: initialProduct.measurementUnit,
+          },
+        )
+        .groupBy('product.id')
+        .addGroupBy('company.id')
+        .addGroupBy('product.net_content')
+        .addGroupBy('product.measurementUnit')
+        .orderBy('product.net_content')
+        .getRawMany(); // <-- Fetch raw results with selected fields
 
-    // Convert raw results to Product entities while adding providerId
-    const products = rawProducts.map((raw): Product => {
-      // Create a new object removing 'product_' prefix from keys
-      const cleanedData = Object.keys(raw).reduce((acc, key) => {
-        const newKey = key.startsWith('product_')
-          ? key.replace('product_', '')
-          : key;
-        acc[newKey] = raw[key];
-        return acc;
-      }, {});
-
-      // Create product entity with cleaned data
-      const result: Product = plainToClass(Product, {
-        ...cleanedData,
-        providerId: raw.product_company_id,
+      const result = cleanProducts<Product>({
+        rawProducts: rawProducts,
+        keyMappings: { companyId: 'providerId' },
+        keysToRemove: ['companyId'],
       });
 
-      delete (result as any).company_id;
       return result;
-    });
-
-    // Filter to get the product with the best price for each net_content
-    const bestPriceProducts = products.reduce<Product[]>((acc, curr) => {
-      const existingProduct = acc.find(
-        (p) => p.net_content === curr.net_content,
-      );
-
-      if (!existingProduct || curr.price < existingProduct.price) {
-        // Remove previous product with the same net_content (if any)
-        const filteredAcc = acc.filter(
-          (p) => p.net_content !== curr.net_content,
-        );
-        return [...filteredAcc, curr]; // Add the new product
-      }
-
-      return acc; // Keep the existing accumulator if the condition isn't met
-    }, []);
-
-    return bestPriceProducts;
+    } catch (error) {
+      console.log(error);
+    }
   }
 
   /**
@@ -736,13 +719,13 @@ export class ProductService {
       return product;
     }
 
-    const convertedPrice = getConvertedPricePerUnit(
+    const convertedPrice = await getConvertedPricePerUnit(
       units,
       product.measurementUnit, // Product's measurement unit
       product.price, // Product's price
       product.unitConversionFactor || 1, // Conversion factor or quantity
       product.measurementUnit,
-      product.net_content,
+      product.netContent,
     );
 
     // If the conversion returned null, skip this product
@@ -765,9 +748,9 @@ export class ProductService {
    * @returns {Promise<string[]>} A promise that resolves to an array of unit standard names.
    */
   private async getUnits(): Promise<string[]> {
-    let units: string[] | undefined = await this.cacheManager.get('units');
+    let units: string[] | undefined = [];
 
-    if (!units) {
+    if (units.length == 0) {
       units = await this.unitsRepository
         .find({
           select: ['standardName'],
@@ -833,6 +816,32 @@ export class ProductService {
     }
 
     return product;
+  }
+
+  /**
+   * Delete product from providers inventory
+   *
+   * @param {UUID} productId - The unique identifier of the product.
+   * @throws {Error} If the product is not found.
+   */
+  async deleteProduct(companyId: UUID, productId: UUID) {
+    const product = await this.productRepository.findOne({
+      where: { id: productId },
+      relations: ['company'],
+    });
+
+    if (!product) {
+      throw new Error('Product not found');
+    }
+
+    // If the product belongs to the company, remove the company relation
+    if (product.company.id === companyId) {
+      product.company = null;
+      await this.productRepository.save(product);
+      return { affected: 1 };
+    }
+
+    throw new Error('Product does not belong to this company');
   }
 
   /**
@@ -1036,28 +1045,10 @@ export class ProductService {
   private async searchProductByEan(ean: string, companyId: UUID) {
     if (ean) {
       // Search the product in your local database
-      let product = await this.getProductLocallyByGTIN(ean);
+      let product = await this.getProductLocallyByGTIN(ean, companyId);
 
       if (product) {
-        // Check if the product belongs to the company
-        const isRelated =
-          (await this.productRepository
-            .createQueryBuilder('product')
-            .innerJoin('product.company', 'company')
-            .where('company.id = :companyId', { companyId })
-            .andWhere('product.id = :productId', { productId: product.id })
-            .getCount()) > 0;
-
-        if (isRelated) {
-          return [];
-        }
-
-        // Map product to DTO and include the flag
-        const result = plainToClass(ProviderProductResponseDto, product, {
-          excludeExtraneousValues: true,
-        });
-
-        return [{ ...result }];
+        return [{ ...product }];
       }
 
       // If not found locally, search in GS1

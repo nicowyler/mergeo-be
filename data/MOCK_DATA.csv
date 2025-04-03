@@ -1,4 +1,4 @@
-name,brand,description,variety,family,image,measurementUnit,unitConversionFactor,  price,net_content,units,manufacturer_name,manufacturer_id,manufacturer_country
+name,brand,description,variety,family,image,measurementUnit,unitConversionFactor,  price,netContent,units,manufacturer_name,manufacturer_id,manufacturer_country
 Sole - Fillet,"Sawayn, Lindgren and Becker","Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Proin risus. Praesent lectus.",box,,http://dummyimage.com/175x100.png/ff4444/ffffff,Ounces,k,$2.89,22,1,Lazz,b4bbbf68-e3c0-4d86-9222-919298ef74fb,Chile
 Island Oasis - Sweet And Sour Mix,Medhurst Inc,In quis justo. Maecenas rhoncus aliquam lacus. Morbi quis tortor id nulla ultrices aliquet.,pack,,http://dummyimage.com/193x100.png/5fa2dd/ffffff,Grams,k,$7.79,80,2,Skimia,888c40d0-d2a1-45ad-8ae1-ac2d72d776fb,Portugal
 Cheese - Cottage Cheese,"Doyle, Johns and Olson","Vestibulum ac est lacinia nisi venenatis tristique. Fusce congue, diam id ornare imperdiet, sapien urna pretium nisl, ut volutpat sapien arcu sed augue. Aliquam erat volutpat.

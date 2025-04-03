@@ -78,7 +78,7 @@ export class ProviderProductResponseDto {
   @Expose()
   @IsString()
   @IsOptional()
-  net_content?: number;
+  netContent?: number;
 
   @Expose()
   @IsString()
@@ -114,6 +114,16 @@ export class ProviderProductResponseDto {
   @IsString()
   @IsOptional()
   manufacturer_country?: string;
+
+  @Expose()
+  @IsNumber()
+  @IsOptional()
+  price?: number;
+
+  @Expose()
+  @IsNumber()
+  @IsOptional()
+  isInInventory?: boolean;
 }
 
 export class ProductResponseDto extends ProviderProductResponseDto {

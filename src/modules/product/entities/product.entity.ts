@@ -51,7 +51,7 @@ export class Product extends DateAudit {
   variety: string;
 
   @Column('decimal', { nullable: true })
-  net_content: number;
+  netContent: number;
 
   @Column({ nullable: true })
   segment: string;
@@ -108,6 +108,7 @@ export class Product extends DateAudit {
   isFavorite: boolean;
   providerId: UUID;
   morePresentations: boolean;
+  inInventory: boolean;
 }
 
 export type ProductWithFavorite = Product & { isFavorite: boolean };

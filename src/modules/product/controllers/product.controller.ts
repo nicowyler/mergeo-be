@@ -13,12 +13,10 @@ import {
   Request,
   UseGuards,
   Patch,
+  Delete,
 } from '@nestjs/common';
 import { ProductService } from '../services/product.service';
-import {
-  PaginatedSearchProductsDto,
-  SearchProductsDto,
-} from 'src/modules/product/dto/search-products.dto';
+import { PaginatedSearchProductsDto } from 'src/modules/product/dto/search-products.dto';
 import { UUID } from 'crypto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import * as xlsx from 'xlsx';
@@ -223,6 +221,19 @@ export class ProductController {
   async getProductById(@Param('productId') productId: UUID): Promise<Product> {
     const product = await this.productService.getProductById(productId);
     return product;
+  }
+
+  @Post('/:companyId/:productId')
+  @UseGuards(AuthGuard)
+  async deleteProduct(
+    @Param('companyId') companyId: UUID,
+    @Param('productId') productId: UUID,
+  ) {
+    const deleted = await this.productService.deleteProduct(
+      companyId,
+      productId,
+    );
+    return deleted;
   }
 
   @Patch('/:productId')

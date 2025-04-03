@@ -28,6 +28,7 @@ export class CreateBranchDto {
 
   @ApiProperty()
   @IsBoolean()
+  @IsOptional()
   isMain?: boolean;
 
   @ApiProperty()

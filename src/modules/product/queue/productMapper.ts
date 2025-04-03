@@ -33,7 +33,7 @@ export class ProductMapper {
       description: dto.Descripcion,
       brand: dto.Marca || 'Unknown Brand',
       variety: dto.Variedad,
-      net_content: dto.ContenidoNeto || null,
+      netContent: dto.ContenidoNeto || null,
       segment: dto.Segmento,
       family: dto.Familia,
       image: dto.Imagen?.[0] || null,

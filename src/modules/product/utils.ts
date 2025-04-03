@@ -1,52 +1,62 @@
-export function getConvertedPricePerUnit(
-  validUnits: string[], // List of valid units
+export async function getConvertedPricePerUnit(
+  validUnits: string[],
   productUnit: string, // Product's unit of measurement
   finalPrice: number, // Final price for the product
-  unitConversionFactor: number, // Net content of the product (i.e., the quantity)
+  unitConversionFactor: number, // Net content of the product
   baseUnit: string, // Base unit for comparison (e.g., kg, l)
-  netConentent: number, // Net content of the product (i.e., the quantity)
-): number | null {
-  const BaseUnits = {
-    kg: 'kg',
-    gr: 'gr',
-    l: 'l',
-    ml: 'ml',
-    cc: 'cc',
-    pc: 'pc',
+  netContent: number, // Net content amount
+): Promise<number | null> {
+  // Helper function to normalize unit
+  function normalizeUnit(inputUnit: string): string | null {
+    const lowerInputUnit = inputUnit.toLowerCase();
+    return (
+      validUnits.find((unit) => unit.toLowerCase() === lowerInputUnit) || null
+    );
+  }
+
+  const normalizedProductUnit = normalizeUnit(productUnit);
+  const normalizedBaseUnit = normalizeUnit(baseUnit);
+
+  // If either unit is not recognized, return null
+  if (!normalizedProductUnit || !normalizedBaseUnit) {
+    return null;
+  }
+
+  // Define conversion rates for standard units
+  const conversionRates: Record<string, number> = {
+    GR: 0.001, // grams → kg
+    ML: 0.001, // ml → liters
+    CC: 0.001, // cubic cm → liters
+    KG: 1, // kg → kg (no conversion)
+    L: 1, // liters → liters (no conversion)
+    UN: 1, // units stay the same
+    PC: 1, // pieces stay the same
   };
 
-  // Helper function to find the unit type from valid units
-  function findUnitType(unit: string) {
-    for (const [type, units] of Object.entries(validUnits)) {
-      if (units.includes(unit)) {
-        return type;
-      }
+  // Convert net content to the base unit
+  let netContentInBaseUnit = netContent * unitConversionFactor;
+
+  // Perform conversion if needed
+  if (normalizedProductUnit !== normalizedBaseUnit) {
+    if (
+      conversionRates[normalizedProductUnit] &&
+      conversionRates[normalizedBaseUnit]
+    ) {
+      netContentInBaseUnit *=
+        conversionRates[normalizedProductUnit] /
+        conversionRates[normalizedBaseUnit];
+    } else {
+      return null; // Units are incompatible
     }
-    return null; // Return null if the unit type is not found
   }
 
-  const productUnitType = findUnitType(productUnit);
-
-  // If either unit type is not found or they are incompatible, return null
-  if (productUnitType === null) {
-    return null; // Ignore this product if units are incompatible
+  // Prevent division by zero
+  if (netContentInBaseUnit === 0) {
+    return null;
   }
 
-  // Convert net content to the base unit (kg or l)
-  let netContentInBaseUnit = unitConversionFactor * netConentent;
-
-  if (baseUnit === 'kg' && productUnit.toLowerCase() === BaseUnits.gr) {
-    netContentInBaseUnit = unitConversionFactor / 1000; // Convert grams to kilograms
-  } else if (baseUnit === 'l' && productUnit.toLowerCase() === BaseUnits.ml) {
-    netContentInBaseUnit = unitConversionFactor / 1000; // Convert milliliters to liters
-  } else if (baseUnit === 'l' && productUnit.toLowerCase() === BaseUnits.cc) {
-    netContentInBaseUnit = unitConversionFactor / 1000; // Convert cubic centimeters to liters
-  }
-
-  // Calculate the price per base unit (final price divided by the content in base unit)
-  const pricePerBaseUnit = finalPrice / netContentInBaseUnit;
-
-  return pricePerBaseUnit;
+  // Calculate and return price per base unit
+  return finalPrice / netContentInBaseUnit;
 }
 
 // Helper function to normalize day names
@@ -105,4 +115,40 @@ export function getDateRangeForDays(
     startDateFormatted: startDate.toISOString(),
     endDateFormatted: endDate.toISOString(),
   };
+}
+
+export function cleanProducts<T>({
+  rawProducts,
+  keyMappings,
+  keysToRemove,
+}: {
+  rawProducts: T[];
+  keyMappings?: Record<string, string>;
+  keysToRemove?: string[];
+}): T[] {
+  keyMappings = keyMappings || {};
+  keysToRemove = keysToRemove || [];
+  return rawProducts.map((raw) => {
+    const cleanedData = Object.keys(raw).reduce((acc, key) => {
+      // Step 1: Remove "product_" prefix
+      let newKey = key.startsWith('product_')
+        ? key.replace('product_', '')
+        : key;
+
+      // Step 2: Convert snake_case to camelCase
+      newKey = newKey.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+
+      // Step 3: Apply key mapping if exists
+      newKey = keyMappings[newKey] || newKey;
+
+      acc[newKey] = raw[key];
+      return acc;
+    }, {} as Record<string, any>);
+
+    // Step 4: Remove specified keys
+    keysToRemove.forEach((key) => delete cleanedData[key]);
+
+    // Step 5: Convert to class instance
+    return cleanedData as T;
+  });
 }
